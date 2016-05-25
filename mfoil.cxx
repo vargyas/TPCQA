@@ -33,17 +33,20 @@ MFoil::MFoil() :
 	fNumChannels(24),
     fName(0),
     fInFileName(0),
-    fhChannel(0),	
-	fhChannelPos(0),	
-	fCurrents(0),
+	fFlagIsProcessed(kFALSE),
+	fFlagIsLoaded(kFALSE),
+	fFlagQuality(0),
+	fQualityText(0),
+	fMeasurementStart(0),
+	fMeasurementEnd(0),
+	fSatCurrent(0),
 	fNumSparks(0),
-    fSatVoltage(0),
-    fFlagIsProcessed(kFALSE),
-    fFlagIsLoaded(kFALSE),
-    fFlagQuality(0),
-	fQualityText(0)
+	fhChannel(0),
+	fhChannelPos(0),
+	fCurrents(0)
 {
     // default constructor
+	CreateHLimit();
 }
 //----------------------------------------------------------------------------------
 MFoil::~MFoil() 
@@ -69,14 +72,23 @@ void MFoil::SetFileName(const TString filename)
 	}
 }
 //----------------------------------------------------------------------------------
-void MFoil::LoadFoilCurrents()
+void MFoil::LoadFoilCurrents(const TString filename)
 {	
+	// setting the file name
+	SetFileName(filename);
+
+	// not yet processed, setting flag
 	fFlagIsProcessed = kFALSE;
+	
 	// clear histogram array before loading, if loaded already
 	if (fFlagIsLoaded) {
 		std::cout << "clearing fhChannel\n";
-		for (Int_t ich = 0; ich<fNumChannels; ich++) delete fhChannel.At(ich);
+		for (Int_t ich = 0; ich<fNumChannels; ich++) {
+			delete fhChannel.At(ich);
+			delete fhChannelPos.At(ich);
+		}
 		fhChannel.Clear(); 
+		fhChannelPos.Clear(); 
 	}
     Int_t ndata = 0;
     std::ifstream inFile;
@@ -88,6 +100,9 @@ void MFoil::LoadFoilCurrents()
 	
 	std::string tim;
     std::vector<Double_t> times, times_shift, current_temp;
+	times.reserve(1000); times_shift.reserve(1000); current_temp.reserve(1000);
+	date.reserve(1000);
+	
     Double_t c[24];
 
 	// open file and load currents
@@ -118,7 +133,6 @@ void MFoil::LoadFoilCurrents()
 
 		++ndata;
 	} 
-	
 	// fill histogram array
 	for (Int_t ich = 0; ich<fNumChannels; ich++)
 	{
@@ -136,61 +150,145 @@ void MFoil::LoadFoilCurrents()
     }
     fFlagIsLoaded = kTRUE;
 }
-
 //----------------------------------------------------------------------------------
 void MFoil::ProcessFoilCurrents()
 {
 	fNumSparks.clear();
-	// get measurement area:
-	// hist minimum < x < current changes to 0
-//	std::vector<Double_t> min, max;
-//	for (Int_t ich = 0; ich < fNumChannels; ich++)
-//	{
-//		min.push_back(((TH1D*)fhChannel.At(ich))->GetMinimum());
-//	}
-	//Double_t min, max;
-	//min = ((TH1D*)fhChannel.At(0))->GetMinimum();
-	//max = ((TH1D*)fhChannel.At(0))->GetMaximum();
-	//std::cout << min << "\t" << max << std::endl;
 	
-	// Determine saturation current and count
-	// the number of sparks for each channel
-	TSpectrum * s = new TSpectrum(10); // expecting less than 10 sparks
-
-	TF1 * fconst = new TF1("fconst","pol0",0,((TH1D*)fhChannel.At(0))->GetXaxis()->GetXmax());
+	// get measurement range:
+	fMeasurementStart = DetectMeasurementStart() + 100; // avoid possible remnants from ramping
+	fMeasurementEnd = DetectMeasurementStop();
+	
+	// add spark counting, and remove those before fitting
+	// TODO
+	// spark definition: ???% change in ???seconds (few bins)
+	
+	// determine saturation current by fitting constant
+	TF1 * fconst = new TF1("fconst","pol0",fMeasurementStart, fMeasurementEnd);
 	fconst->SetParameter(0,0.0);
-	Double_t threshold = 0;
-	Int_t nsparks;
+	
 	for (Int_t ich = 0; ich < fNumChannels; ich++)
 	{
-		threshold = ((TH1D*)fhChannel.At(ich))->GetMaximum()/20.;
-		nsparks = s->Search(((TH1D*)fhChannel.At(ich)),1,"",threshold);
-		fNumSparks.push_back( nsparks );
-		Double_t *xpeaks = s->GetPositionX();
-		
-		((TH1D*)fhChannel.At(ich))->Fit("fconst","qn");
-		fSatVoltage.push_back( fconst->GetParameter(0) );
+		((TH1D*)fhChannelPos.At(ich))->Fit(fconst, "RQ");
+		fSatCurrent.push_back( fconst->GetParameter(0) );
 	}
-	cout << "Found sparks = \n";
-	for (Int_t ich = 0; ich < fNumChannels; ich++) cout << fNumSparks.at(ich) << endl;
-	// draw measurement area (lines)
 
-	// count sparks
-	// spark definition: ???% change in ???seconds (few bins)
-
-	// get saturation current:
-	// fitting constant to 
-	
-	// update canvas : 
-	// set background according to quality, show sparks
 	fFlagIsProcessed = kTRUE;
+}
+//---------------------------------------------------------------------------------- 
+Double_t GetMax(Double_t * array, int narray)
+{
+	Double_t xmax = array[0];
+	for(int i=1; i<narray; i++)
+	{
+		if(array[i]>xmax) xmax=array[i];
+	}
+	return xmax;
+}
+//---------------------------------------------------------------------------------- 
+Double_t MFoil::DetectMeasurementStart()
+{
+	TSpectrum * s = new TSpectrum(10); // expecting less than 10 ramps
+	Double_t * xpeaks;
+	Double_t xpeaks_max[24];
+	Double_t threshold = 0;
+	Int_t nramps;
+	for (Int_t ich = 0; ich < fNumChannels; ich++)
+	{
+		threshold = ((TH1D*)fhChannelPos.At(ich))->GetMaximum()/5.;
+		nramps = s->Search(((TH1D*)fhChannelPos.At(ich)),1,"nobackground",threshold); // don't automatically remove background 
+
+		xpeaks_max[ich] = s->GetPositionX()[0];
+	}
+	return GetMax(xpeaks_max, fNumChannels);
+}
+//---------------------------------------------------------------------------------- 
+Double_t MFoil::DetectMeasurementStop()
+{
+	// count consequitive bins with positive current
+	// (negative here because of the flipped histogram)
+	Int_t count=0;
+	Int_t required_time=20; 
+	Int_t lastbin = 1;
+	Int_t n = ((TH1D*)fhChannelPos.At(0))->GetNbinsX();
+	Double_t xmax[24];
+	
+	for (Int_t ich = 0; ich < fNumChannels; ich++)
+	{
+		TH1D * h = ((TH1D*)fhChannelPos.At(ich));
+		count=0;
+		for(int ib=1; ib<=n; ib++)
+		{
+			if(h->GetBinContent(ib) < 0) ++count;
+			else count = 0;
+			
+			if(count > required_time) {
+				lastbin = ib;
+				break;
+			}
+		}
+		lastbin = lastbin - required_time;
+		xmax[ich] = h->GetBinCenter(lastbin);
+	}
+	return GetMax(xmax, fNumChannels);;
 }
 //---------------------------------------------------------------------------------- 
 int MFoil::GetNC() { return fNumChannels; }
 //----------------------------------------------------------------------------------
 int MFoil::GetType() { return fType; }
 //----------------------------------------------------------------------------------
-Bool_t MFoil::GetProcessedStatus() { return fFlagIsProcessed; }
-
+Bool_t MFoil::GetProcessedStatus() const { return fFlagIsProcessed; }
+//----------------------------------------------------------------------------------
+Bool_t MFoil::GetLoadedStatus() const { return fFlagIsLoaded; }
+//----------------------------------------------------------------------------------
+TString MFoil::GetInfoSatCurrent(Int_t foil_id) const
+{
+	return Form("V_{sat} = %.3f nA\n",fSatCurrent[foil_id]*1E9);
+}
+//----------------------------------------------------------------------------------
+TString MFoil::GetInfoNumSparks(Int_t foil_id) const
+{
+	return Form("# of sparks = %d", fNumSparks[foil_id]);	
+}
+//----------------------------------------------------------------------------------
+TString MFoil::GetInFileName() const { return fInFileName; }
+//----------------------------------------------------------------------------------
+void MFoil::CreateHLimit()
+{
+	fHLimit = new TH1D("hLimit", "", 1, 0, 1E7);
+	fHLimit->SetBinContent(1, 5E-10); // limit is 0.5 nA
+}
+//----------------------------------------------------------------------------------
+void MFoil::DrawHLimit()
+{	
+	fHLimit->SetFillColor(kGreen+1);
+	fHLimit->SetFillStyle(3003);
+	fHLimit->SetLineColor(kGreen+1);
+	fHLimit->Draw("afh same");
+}
+void  MFoil::DrawSatCurrent(Int_t ich)
+{
+	TLine * lcurrent = new TLine(fMeasurementStart, fSatCurrent.at(ich),fMeasurementEnd,  fSatCurrent.at(ich));
+	lcurrent->SetLineColor(kBlack);
+	lcurrent->SetLineWidth(3);
+	
+	lcurrent->Draw();
+}
+void  MFoil::DrawMeasurementRange(Int_t ich)
+{
+	TLine * lrangeLow = new TLine(fMeasurementStart, fSatCurrent.at(ich)/100., fMeasurementStart, fSatCurrent.at(ich)*100.);
+	TLine * lrangeHigh= new TLine(fMeasurementEnd, fSatCurrent.at(ich)/100., fMeasurementEnd, fSatCurrent.at(ich)*100.);
+	lrangeLow->SetLineWidth(2);
+	lrangeHigh->SetLineWidth(2);
+	
+	lrangeLow->Draw();
+	lrangeHigh->Draw();
+}
+//----------------------------------------------------------------------------------
+void MFoil::DrawHChannel(Int_t ich, TString opt)
+{
+    ((TH1D*)fhChannelPos.At(ich))->SetLineColor(kBlue);
+    fhChannelPos.At(ich)->Draw(opt);
+}
 
 #endif

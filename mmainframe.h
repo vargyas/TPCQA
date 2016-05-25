@@ -7,6 +7,7 @@
 #include "RQ_Object.h"
 #include "TQObject.h"
 
+#include "TApplication.h"
 #include "TRootEmbeddedCanvas.h"
 #include "TGButton.h"
 #include "TGFileDialog.h"
@@ -14,6 +15,8 @@
 #include "TGTab.h"
 #include "TGStatusBar.h"
 #include "TPolyMarker.h"
+#include "TGLabel.h"
+
 
 
 // main frame

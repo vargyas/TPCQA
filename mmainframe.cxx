@@ -6,6 +6,7 @@
 MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 {
 	std::cout << "MMainFrame\n";
+	
 	// Create a few colors:
 	Pixel_t yellow, red, green, blue, orange;
 	gClient->GetColorByName("yellow",yellow);
@@ -24,9 +25,10 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 	fEcanvasAll = new TRootEmbeddedCanvas("EcanvasAll",fMain,w-20,h-120);
 	
 	// status bar
-    Int_t parts[] = {15, 10, 30};
-    fStatusBar = new TGStatusBar(fMain, 50, 10, kVerticalFrame);
-    fStatusBar->SetParts(parts, sizeof(parts)/sizeof(parts[0]));
+    fStatusBar = new TGStatusBar(fMain, 60, 10, kVerticalFrame);
+    //Int_t parts[] = {30, 10, 15};
+	//fStatusBar->SetParts(parts, sizeof(parts)/sizeof(parts[0]));
+	fStatusBar->SetParts(3);
     fStatusBar->Draw3DCorner(kFALSE);
 
 	fCanv = fEcanvasAll->GetCanvas();
@@ -34,38 +36,50 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
                    "DrawFoilCurrent(Int_t,Int_t,Int_t,TObject*)");
 	
     // Create a horizontal frame widget with buttons
-    TGHorizontalFrame *hframe = new TGHorizontalFrame(fMain,w,0);
+    TGHorizontalFrame *toolbar = new TGHorizontalFrame(fMain,w,0);
 
-	// Create buttons: load, execute, save and quit on the bottom of the panel
-    TGPictureButton * load = new TGPictureButton(hframe, gClient->GetPicture("ed_open.png"));
+
+	// Create buttons for toolbar: load, execute, save and quit on the bottom of the panel
+    TGPictureButton * load = new TGPictureButton(toolbar, gClient->GetPicture("ed_open.png"));
     load->SetToolTipText ("Open foil leakage current", 400);
     load->Connect("Clicked()","MMainFrame",this,"LoadCurrentFile()"); // TODO: change Clicked, error when nothing selected...
 	load->Resize(40, 40);
-    hframe->AddFrame(load, new TGLayoutHints(kLHintsCenterX));
+    toolbar->AddFrame(load, new TGLayoutHints(kLHintsCenterX));
 
-    TGPictureButton * execute = new TGPictureButton(hframe, gClient->GetPicture("ed_execute.png"));
+    TGPictureButton * execute = new TGPictureButton(toolbar, gClient->GetPicture("ed_execute.png"));
     execute->SetToolTipText ("Evaluate foil", 400);
 	execute->Connect("Clicked()", "MMainFrame", this, "ProcessFoilCurrents()");
 	execute->Resize(40, 40);
-    hframe->AddFrame(execute, new TGLayoutHints(kLHintsCenterX));
+    toolbar->AddFrame(execute, new TGLayoutHints(kLHintsCenterX));
 
-    TGPictureButton * save = new TGPictureButton(hframe, gClient->GetPicture("ed_save.png"));
+    TGPictureButton * save = new TGPictureButton(toolbar, gClient->GetPicture("ed_save.png"));
     save->SetToolTipText ("Save foil parameters to database", 400);
 	save->Resize(40, 40);
-    hframe->AddFrame(save, new TGLayoutHints(kLHintsCenterX));
+    toolbar->AddFrame(save, new TGLayoutHints(kLHintsCenterX));
 
-    TGPictureButton * quit = new TGPictureButton(hframe, gClient->GetPicture("ed_quit.png"));
+    TGPictureButton * quit = new TGPictureButton(toolbar, gClient->GetPicture("ed_quit.png"));
     quit->SetToolTipText ("Quit application", 400);
     quit->Connect("Clicked()","MMainFrame",this,"DoExit()");
 	quit->Resize(40, 40);
-    hframe->AddFrame(quit, new TGLayoutHints(kLHintsCenterX));
+    toolbar->AddFrame(quit, new TGLayoutHints(kLHintsCenterX));
 
+    TGPictureButton * help = new TGPictureButton(toolbar, gClient->GetPicture("ed_help.png"));
+    help->SetToolTipText ("Help", 400);
+	help->Resize(40, 40);
+    toolbar->AddFrame(help, new TGLayoutHints(kLHintsCenterX));	
 	
+	//  Create a top bar to hold info and more elaborate commands
+	//  TGHorizontalFrame *topbar = new TGHorizontalFrame(fMain,w,0);
+	//  fMain->AddFrame(topbar, new TGLayoutHints(kLHintsCenterX | kLHintsTop  ));
+	
+	// Add frames to main frame
+    
+
 	fMain->AddFrame(fEcanvasAll, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 	
 	fMain->AddFrame(fStatusBar, new TGLayoutHints(kLHintsExpandX) );
 
-    fMain->AddFrame(hframe, new TGLayoutHints(kLHintsCenterX | kLHintsBottom ));
+    fMain->AddFrame(toolbar, new TGLayoutHints(kLHintsCenterX | kLHintsBottom ));
 	
 
     // Set a name to the main frame
@@ -115,17 +129,22 @@ void MMainFrame::DrawFoilCurrents()
 	if(N==24) fCanv->Divide(4, 6, 0, 0); // OROC
 
 	TPad* cdiv[24];
+	gStyle->SetOptStat(0);
     for(int ich=0; ich<N; ich++)
     {
         cdiv[ich] = (TPad*) fCanv->GetListOfPrimitives()->FindObject(Form("EcanvasAll_%d",ich+1));
 		cdiv[ich]->SetName(Form("CH%d",ich+1));
         cdiv[ich]->cd();
-        //fFoil->fhChannel.At(ich)->Draw("hist");
-        ((TH1D*)fFoil->fhChannelPos.At(ich))->SetLineColor(kRed);
-        fFoil->fhChannel.At(ich)->Draw("hist");
+        fFoil->DrawHChannel(ich, "hist");
+		fFoil->DrawHLimit();
+		
+		cdiv[ich]->SetLogy();
 		
 		if(fFoil->GetProcessedStatus()) {
-			TList *functions = ((TH1D*)fFoil->fhChannel.At(ich))->GetListOfFunctions();
+			//fFoil->DrawSatCurrent(ich);
+			fFoil->DrawMeasurementRange(ich);
+		
+			TList *functions = ((TH1D*)fFoil->fhChannelPos.At(ich))->GetListOfFunctions();
 			TPolyMarker *pm = (TPolyMarker*)functions->FindObject("TPolyMarker");
 			if(pm) pm->Draw("same");
 		}
@@ -136,6 +155,7 @@ void MMainFrame::DrawFoilCurrents()
 
     fCanv->Modified();
     fCanv->Update();
+
 }
 
 void MMainFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
@@ -143,8 +163,8 @@ void MMainFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
 // Writes the event status in the status bar parts
    const char *text;
    char text2[50];
-   text = selected->GetName();
-   fStatusBar->SetText(text,0);
+   //text = selected->GetName();
+   fStatusBar->SetText(fFoil->GetInFileName(),0);
    if (event == kKeyPress)
       sprintf(text2, "%c", (char) px);
    else
@@ -180,13 +200,27 @@ void MMainFrame::DrawFoilCurrent(Int_t event, Int_t px, Int_t py, TObject * sele
 
 	fCanv = fEcanvasCh[foil_id]->GetCanvas();
 	fCanv->Clear();
-	fFoil->fhChannel.At(foil_id)->Draw("hist");
-	//fFoil->fhChannelPos.At(foil_id)->Draw("hist");
-	
-	if(fFoil->GetProcessedStatus()) {
-		TList *functions = ((TH1D*)fFoil->fhChannel.At(foil_id))->GetListOfFunctions();
+	fFoil->DrawHChannel(foil_id,"hist");
+	fFoil->DrawHLimit();
+
+	fCanv->SetLogy();
+	gStyle->SetOptStat(0);
+
+	if(fFoil->GetProcessedStatus()) 
+	{
+		fFoil->DrawSatCurrent(foil_id);
+		fFoil->DrawMeasurementRange(foil_id);
+		
+		TList *functions = ((TH1D*)fFoil->fhChannelPos.At(foil_id))->GetListOfFunctions();
 		TPolyMarker *pm = (TPolyMarker*)functions->FindObject("TPolyMarker");
 		if(pm) pm->Draw("same");
+			
+		TLegend * tinfo = new TLegend(0.5, 0.5, 0.98, 0.8, "", "brNDC");
+		tinfo->SetFillStyle(0); tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
+		tinfo->AddEntry((TObject*)0,"Stat", "");
+		tinfo->AddEntry((TObject*)0,fFoil->GetInfoSatCurrent(foil_id), "");
+		//tinfo->AddEntry((TObject*)0,fFoil->GetInfoNumSparks(foil_id), "");
+		tinfo->Draw();
 	}
 
 	fSide->AddFrame( fEcanvasCh[foil_id], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY) );
@@ -212,16 +246,19 @@ void MMainFrame::LoadCurrentFile()
 	{    
 		printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
 		dir = fi.fIniDir;
-		fFoil->SetFileName(fi.fFilename);
-		fFoil->LoadFoilCurrents();
+		fFoil->LoadFoilCurrents(fi.fFilename);
 		DrawFoilCurrents();
 	}
 }
 
+
 void MMainFrame::ProcessFoilCurrents()
 {
-	fFoil->ProcessFoilCurrents();
-	DrawFoilCurrents(); // re-draw to include processing results 
+	if(fFoil->GetLoadedStatus())
+	{
+		fFoil->ProcessFoilCurrents();
+		DrawFoilCurrents(); // re-draw to include processing results 
+	}
 }
 
 void MMainFrame::DoExit()
