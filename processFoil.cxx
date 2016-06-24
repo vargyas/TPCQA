@@ -47,7 +47,7 @@
 
 void processFoil()
 {
-    new MMainFrame(gClient->GetRoot(), 700, 600);
+    new MMainFrame(gClient->GetRoot(), 900, 700);
 }
 
 //#ifdef STANDALONE
