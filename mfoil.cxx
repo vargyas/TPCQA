@@ -1,86 +1,28 @@
-
-//#include "mutils.cxx"
 #include "mfoil.h"
+
 
 #ifndef MFOIL_CXX
 #define MFOIL_CXX
 
-const char *filetypes[] = { "All files",     "*",
-                            "Text files",    "*.[tT][xX][tT]",
-                            "ROOT files",    "*.root",
-                            0,               0 };
 
-//----------------------------------------------------------------------------------
-Double_t String2Sec(const std::string timestring)
-{
-	const char * _ctime = timestring.c_str();
-	std::istringstream _ss(_ctime);
-	std::string _token;
-	double _times_temp;
-	double _times[3];
-	int _itimes = 0;
-
-	while (std::getline(_ss, _token, ':'))
-	{
-		std::istringstream(_token) >> _times_temp;
-		_times[_itimes++] = _times_temp;
-	}
-	return _times[0] * 60 * 60 + _times[1] * 60 + _times[2];
-}
-
-//----------------------------------------------------------------------------------
-Double_t AverageHist(TH1D * h)
-{
-	Int_t n = h->GetNbinsX();
-	Double_t val = 0;
-	for(Int_t ib = 0; ib < n; ++ib)
-	{
-		val += h->GetBinContent(ib+1);
-	}
-	return val / Double_t(n);
-}
-//----------------------------------------------------------------------------------
-// find x-limits (first and last non-zero bins)
-Double_t * GetXlimits(TH1D * h)
-{
-	Int_t count  = 0;
-	Double_t val = 0;
-	Double_t eps = 1E-10;
-	Double_t * limits = new Double_t[2];
-	
-	for(Int_t ib = 1; ib <= h->GetNbinsX(); ++ib)
-	{
-		val = h->GetBinContent(ib);
-		//std::cout << val << endl;
-
-		if(val < -eps && val > eps) // instead of != 0
-		{
-			++count;
-			if(count == 1) limits[0] = val;
-			else limits[1] = val;
-		}
-	}
-    std::cout << "limits are: " << limits[0] << "\t" << limits[1] << std::endl;
-	return limits;
-}
 //----------------------------------------------------------------------------------
 MFoil::MFoil() :
 	fType(0),
 	fNumChannels(24),
     fName(0),
     fInFileName(0),
-	fnSparks(0),
 	fFlagIsProcessed(kFALSE),
 	fFlagIsLoaded(kFALSE),
 	fFlagQuality(0),
+	fnSparks(0),
 	fQualityText(0),
 	fMeasurementStart(0),
 	fMeasurementEnd(0),
 	fSatCurrent(0),
+	fhSparks(0),
+	fhChStdDev(0),
 	fhChannel(0),
 	fhChannelPos(0),
-	fhChStdDev(0),
-	fhSparks(0),
 	fCurrents(0)
 {
     // default constructor
@@ -121,6 +63,8 @@ void MFoil::SetFileName(const TString filename)
 //----------------------------------------------------------------------------------
 void MFoil::LoadFoilCurrents(const TString filename)
 {	
+	std::cout << "LoadFoilCurrents()\n";
+
 	// setting the file name
 	SetFileName(filename);
 
@@ -130,7 +74,8 @@ void MFoil::LoadFoilCurrents(const TString filename)
 	// clear histogram array before loading, if loaded already
 	if (fFlagIsLoaded) {
 		std::cout << "clearing fhChannel\n";
-		for (Int_t ich = 0; ich<fNumChannels; ich++) {
+		for (Int_t ich = 0; ich<fNumChannels; ich++)
+		{
 			delete fhChannel.At(ich);
 			delete fhChannelPos.At(ich);
 			delete fhChStdDev.At(ich);
@@ -199,23 +144,16 @@ void MFoil::LoadFoilCurrents(const TString filename)
 			((TH1D*)fhChannelPos.At(ich))->SetBinContent(it+1, -1.*(fCurrents[it][ich]));
 			((TH1D*)fhChannelPos.At(ich))->SetBinError(it+1, 1E-10);
         }
-		// create and fill std dev. histogram
-		Double_t mean = AverageHist( (TH1D*)fhChannelPos.At(ich) );
-		std::vector<double> x(ndata);
-		((TH1D*)fhChannelPos.At(ich))->GetCenter( &x[0] );
-		const Double_t *y = ((TH1D*)fhChannelPos.At(ich))->GetArray();
-		Double_t median = TMath::Median(ndata, &x[0], &y[1]);
 
-		fhChStdDev.Add(new TH1D(Form("h_stddev%d", ich+1), Form("CH %d", ich+1), ndata+1, -1./20.*TMath::Abs(median), 1./3.*TMath::Abs(median)));
+		// create and fill std dev. histogram
 		Double_t val = 0;
+		Double_t median = GetMedian( (TH1D*)fhChannelPos.At(ich) );
+		fhChStdDev.Add(new TH1D(Form("h_stddev%d", ich+1), Form("CH %d", ich+1), ndata+1, -3.*TMath::Abs(median), 3.*TMath::Abs(median)));
 		for(Int_t it=0; it<ndata; it++)
 		{
 			val = ((TH1D*)fhChannelPos.At(ich))->GetBinContent(it+1);
 			((TH1D*)fhChStdDev.At(ich))->Fill( (median-val) );
-			//if(ich==0) cout << mean-xmin << "\t" << mean << "\t" << val << "\t" << mean-xmax << endl;
 		}
-		((TH1D*)fhChStdDev.At(ich))->Print();
-
     }
     fFlagIsLoaded = kTRUE;
 }

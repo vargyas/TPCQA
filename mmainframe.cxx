@@ -1,73 +1,4 @@
-#include "mfoil.cxx"
-
-#include "RQ_Object.h"
-#include "TQObject.h"
-#include "TROOT.h"
-#include "TApplication.h"
-#include "TRootEmbeddedCanvas.h"
-#include "TGButton.h"
-#include "TGFileDialog.h"
-#include "TGMsgBox.h"
-#include "TGTab.h"
-#include "TGStatusBar.h"
-#include "TPolyMarker.h"
-#include "TGLabel.h"
-
-
-class MMainFrame
-{
-RQ_OBJECT("MMainFrame")
-
-private:
-	TGMainFrame         * fMain;
-	TGStatusBar 		* fStatusBar;
-	TCanvas 			* fCanv;
-	TGPictureButton     * load, * execute, * save, * quit, * help;
-	TGHorizontalFrame   * toolbar;
-	TGTab				* fTab;
-
-protected:
-	MFoil 				* fFoil;
-
-public:
-	TRootEmbeddedCanvas * fEcanvasAll;
-
-	MMainFrame(const TGWindow *p, UInt_t w, UInt_t h);
-	virtual ~MMainFrame();
-
-    // slots
-    void DoExit();
-    void LoadCurrentFile();
-	void DrawFoilCurrent(Int_t event, Int_t px, Int_t py, TObject * sel);
-	void DrawFoilCurrent(Int_t foil_id);
-
-    void DrawFoilCurrents();
-	void DrawStdDevs();
-	void ProcessFoilCurrents();
-	
-	void ClickOnPad(Int_t ich, Int_t &px, Int_t &py);
-	Int_t ClickedOnPad(Int_t px, Int_t py); 
-	void EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
-	void Save();
-};
-class MDialog 
-{
-RQ_OBJECT("MDialog")
-
-private:
-	TGTransientFrame    * fMain;
-	TCanvas 			* fCanv;
-
-public:
-	MDialog(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h);
-	virtual ~MDialog();
-	TRootEmbeddedCanvas * fECanvasCh;
-	TGStatusBar 		* fStatusBarLocal;
-	void DrawFoilCurrent(Int_t foil_id, MFoil * foil);
-	void FoilInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
-	void Save();
-};
-
+#include "mmainframe.h"
 
 
 MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
@@ -170,7 +101,8 @@ MMainFrame::~MMainFrame()
 	//delete save;
 	//delete quit;
 	//delete help;
-	fMain->DeleteWindow();
+	fMain->Cleanup();
+	delete fMain;
 }
 
 void MMainFrame::DrawStdDevs()
@@ -370,8 +302,6 @@ void MMainFrame::DrawFoilCurrent(Int_t foil_id)
 
 void MMainFrame::Save()
 {
-	Int_t px = 0;
-	Int_t py = 0;
 	gROOT->SetBatch(kTRUE);
 	
 	// draw current overview
@@ -407,9 +337,11 @@ void MMainFrame::DoExit()
                 //kMBIconQuestion, kMBYes | kMBNo, &ret);
   
    //if (ret == kMBYes) return gApplication->Terminate(0);
-    if (ret == kMBYes) {
+	if (ret == kMBYes)
+	{
 		gApplication->Terminate();
 	}
+
 }
 
 
@@ -499,3 +431,4 @@ MDialog::~MDialog()
 	//delete fECanvasCh;
 	//delete fStatusBarLocal;
 }
+

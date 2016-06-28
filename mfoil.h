@@ -10,27 +10,147 @@
 #include<ctime>
 #include<vector>
 
+#include "TF1.h"
+#include "TH1D.h"
+#include "TH2D.h"
+#include "TGraph.h"
+
 #include "TMath.h"
-#include "TSpectrum.h"
 #include "TVirtualFitter.h"
 #include "TFile.h"
 #include "TTree.h"
-#include "TEnv.h"
-#include "TF1.h"
 #include "TParameter.h"
 #include "TString.h"
-#include "TGraph.h"
-#include "TH1D.h"
-#include "TH2D.h"
+
 #include "TCanvas.h"
+#include "TRootEmbeddedCanvas.h"
 #include "TPad.h"
 #include "TLegend.h"
-#include "TRootEmbeddedCanvas.h"
+#include "TLine.h"
+
+#include "TROOT.h"
+#include "TStyle.h"
+#include "TEnv.h"
+
 #include "RQ_Object.h"
 #include "TQObject.h"
+#include "TApplication.h"
 #include "TGFileDialog.h"
-#include "TLine.h"
-#include "TStyle.h"
+#include "TGButton.h"
+#include "TGMsgBox.h"
+#include "TGTab.h"
+#include "TGStatusBar.h"
+#include "TPolyMarker.h"
+#include "TGLabel.h"
+
+#include <TClass.h>
+#include <TVirtualX.h>
+#include <TVirtualPadEditor.h>
+#include <TGResourcePool.h>
+#include <TGListBox.h>
+#include <TGListTree.h>
+#include <TGFSContainer.h>
+#include <TGClient.h>
+#include <TGFrame.h>
+#include <TGIcon.h>
+#include <TGTextEntry.h>
+#include <TGNumberEntry.h>
+#include <TGMenu.h>
+#include <TGCanvas.h>
+#include <TGComboBox.h>
+#include <TGSlider.h>
+#include <TGDoubleSlider.h>
+#include <TGTextEdit.h>
+#include <TGShutter.h>
+#include <TGProgressBar.h>
+#include <TGColorSelect.h>
+#include <TColor.h>
+#include <TRandom.h>
+#include <TSystem.h>
+#include <TSystemDirectory.h>
+#include <TKey.h>
+#include <TGDockableFrame.h>
+#include <TGFontDialog.h>
+
+
+const char *filetypes[] = { "All files",     "*",
+							"Text files",    "*.[tT][xX][tT]",
+							"ROOT files",    "*.root",
+							0,               0 };
+
+//----------------------------------------------------------------------------------
+Double_t String2Sec(const std::string timestring)
+{
+	const char * _ctime = timestring.c_str();
+	std::istringstream _ss(_ctime);
+	std::string _token;
+	double _times_temp;
+	double _times[3];
+	int _itimes = 0;
+
+	while (std::getline(_ss, _token, ':'))
+	{
+		std::istringstream(_token) >> _times_temp;
+		_times[_itimes++] = _times_temp;
+	}
+	return _times[0] * 60 * 60 + _times[1] * 60 + _times[2];
+}
+
+//----------------------------------------------------------------------------------
+Double_t AverageHist(TH1D * h)
+{
+	Int_t n = h->GetNbinsX();
+	Double_t val = 0;
+	for(Int_t ib = 0; ib < n; ++ib)
+	{
+		val += h->GetBinContent(ib+1);
+	}
+	return val / Double_t(n);
+}
+//----------------------------------------------------------------------------------
+// find x-limits (first and last non-zero bins)
+Double_t * GetXlimits(TH1D * h)
+{
+	Int_t count  = 0;
+	Double_t val = 0;
+	Double_t eps = 1E-10;
+	Double_t * limits = new Double_t[2];
+
+	for(Int_t ib = 1; ib <= h->GetNbinsX(); ++ib)
+	{
+		val = h->GetBinContent(ib);
+		//std::cout << val << endl;
+
+		if(val < -eps && val > eps) // instead of != 0
+		{
+			++count;
+			if(count == 1) limits[0] = val;
+			else limits[1] = val;
+		}
+	}
+	std::cout << "limits are: " << limits[0] << "\t" << limits[1] << std::endl;
+	return limits;
+}
+//----------------------------------------------------------------------------------
+// own median finder
+Double_t GetMedian(TH1D * h)
+{
+	Int_t n = h->GetNbinsX();
+	std::vector<double> y;
+	y.reserve(n);
+	for(Int_t ib = 1; ib <= n; ++ib)
+		y.push_back(h->GetBinContent(ib));
+
+	std::sort(y.begin(), y.end());
+	Double_t median_y = y.at(n/2);
+
+	//Int_t median_index;
+	//h->GetBinWithContent( median_y, median_index );
+	//Double_t median_x = h->GetBinCenter(median_index);
+	return median_y;
+}
+
+
 
 class MFoil   
 {
