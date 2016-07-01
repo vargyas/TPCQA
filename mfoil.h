@@ -3,6 +3,7 @@
 #ifndef MFOIL_H
 #define MFOIL_H
 
+#include <algorithm>
 #include<iostream>
 #include<string>
 #include<fstream>
@@ -95,7 +96,6 @@ Double_t String2Sec(const std::string timestring)
     }
     return _times[0] * 60 * 60 + _times[1] * 60 + _times[2];
 }
-
 //----------------------------------------------------------------------------------
 Double_t AverageHist(TH1D * h)
 {
@@ -164,7 +164,7 @@ private:
 
     Bool_t fFlagIsProcessed;            ///< Status of processing of the foil, true if done, false if not
     Bool_t fFlagIsLoaded;               ///< True if is loaded already, false if it is the first load of the datafile 
-    Int_t fFlagQuality;                 ///< Quality of the foil, as determined by process. Possible values: 0=bad (red), 1=good (green), 2=problematic (orange)
+    std::vector<Int_t> fFlagQuality;    ///< Quality of the foil, as determined by process for each channel. Possible values: 0=bad (red), 1=good (green), 2=problematic (orange)
     TString fQualityText;               ///< Quality of the foil described by the operator
     TH1D * fHLimit;                     ///< Histogram holding the leakage current limit (0.5nA now)
     Double_t fMeasurementStart;         ///< Start of measurement, after ramping is finished, determined by DetectMeasurementStart()
@@ -199,7 +199,7 @@ public:
     TString GetName() const;
 
     void CreateHLimit(); ///<
-    void DrawHLimit();
+    void DrawHLimit(Int_t ich);
     void DrawHChannel(Int_t id, TString opt);
     void DrawStdDev(Int_t ich, TString opt);
     void DrawSatCurrent(Int_t ich);
@@ -210,7 +210,12 @@ public:
     Double_t DetectMeasurementStop();
     void DetectNSparks();
     Double_t EstimateSatCurrent(Int_t id);
+	
+	Int_t GetProcessedColor(Int_t ich) const ;
+	Double_t GetLastSparkPosition(Int_t ich);
+
     
+    //ClassDef(MFoil, 1);
 };
 
 #endif

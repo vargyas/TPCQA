@@ -4,14 +4,6 @@
 MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 {
     std::cout << "MMainFrame\n";
-    
-    // Create a few colors:
-    Pixel_t yellow, red, green, blue, orange;
-    gClient->GetColorByName("yellow",yellow);
-    gClient->GetColorByName("red",red);
-    gClient->GetColorByName("green",green);
-    gClient->GetColorByName("blue",blue);
-    gClient->GetColorByName("orange",orange);
 
     // Create foil object (make sure to clear it)
     fFoil = new MFoil(); 
@@ -101,7 +93,7 @@ MMainFrame::~MMainFrame()
     //delete save;
     //delete quit;
     //delete help;
-    fMain->Cleanup();
+    fMain->Cleanup(); // should do everything above
     delete fMain;
 }
 
@@ -147,7 +139,7 @@ void MMainFrame::DrawFoilCurrents()
         
         cdiv[ich]->SetLogy();
         fFoil->DrawHChannel(ich, "hist");
-        fFoil->DrawHLimit();
+        fFoil->DrawHLimit(ich);
                 
         if(fFoil->GetProcessedStatus()) 
         {
@@ -287,7 +279,7 @@ void MMainFrame::DrawFoilCurrent(Int_t foil_id)
     fCanv = fEcanvasAll->GetCanvas();
     fCanv->Clear();
     fFoil->DrawHChannel(foil_id, "hist");
-    fFoil->DrawHLimit();
+    fFoil->DrawHLimit(foil_id);
 
     fCanv->SetLogy();
     gStyle->SetOptStat(0);
@@ -377,7 +369,7 @@ void MDialog::DrawFoilCurrent(Int_t foil_id, MFoil * foil)
     //fCanv = fEcanvasCh[foil_id]->GetCanvas();
     fCanv->Clear();
     foil->DrawHChannel(foil_id, "hist");
-    foil->DrawHLimit();
+    foil->DrawHLimit(foil_id);
 
     fCanv->SetLogy();
     gStyle->SetOptStat(0);

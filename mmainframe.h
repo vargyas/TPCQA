@@ -34,6 +34,8 @@ public:
     Int_t ClickedOnPad(Int_t px, Int_t py);
     void EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
     void Save();
+
+    //ClassDef(MMainFrame, 1);
 };
 
 class MDialog
@@ -52,4 +54,6 @@ public:
     void DrawFoilCurrent(Int_t foil_id, MFoil * foil);
     void FoilInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
     void Save();
+
+    //ClassDef(MDialog, 1);
 };

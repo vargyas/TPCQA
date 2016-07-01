@@ -161,15 +161,33 @@ void MFoil::LoadFoilCurrents(const TString filename)
 void MFoil::ProcessFoilCurrents()
 {   
     if(fFlagIsProcessed)
-        fSatCurrent.clear();
+	{
+		fSatCurrent.clear();
+		fFlagQuality.clear();
+	}
 
     // get measurement range:
     fMeasurementEnd   = DetectMeasurementStop();
-    fMeasurementStart = fMeasurementEnd - 200;
-
-    // add spark counting, and remove those before fitting
+    fMeasurementStart = fMeasurementEnd - 200;  
     
-    // detect saturation current by averaging measurement area
+    // estimating saturation current
+	for (Int_t ich = 0; ich < fNumChannels; ++ich)
+	{
+		fSatCurrent.push_back( GetMedian( (TH1D*)fhChannelPos.At(ich) ) );
+	}
+	// detect sparks/ramps
+	DetectNSparks();
+	
+	// correct estimated measurement range to not contain any sparks
+	for (Int_t ich = 0; ich < fNumChannels; ++ich)
+	{
+		Double_t max_spark = GetLastSparkPosition(ich);
+		if(max_spark > fMeasurementStart)
+			fMeasurementStart = max_spark;
+	}
+	
+	// calculate saturation current by averaging the determined and corrected measurement area
+	Double_t satcurrent;
     for (Int_t ich = 0; ich < fNumChannels; ++ich)
     {
         Int_t istart  = ((TH1D*)fhChannelPos.At(ich))->FindBin(fMeasurementStart);
@@ -187,10 +205,14 @@ void MFoil::ProcessFoilCurrents()
                 current+=yval;
             }
         }
-        fSatCurrent.push_back( current/Double_t(count) );
+		satcurrent = current/Double_t(count);
+        fSatCurrent.at(ich) = satcurrent;
+		
+		if(satcurrent>=5E-10) fFlagQuality.push_back(0); // bad foil
+		else if(satcurrent<5E-10 && satcurrent>0) fFlagQuality.push_back(1); // good foil
+		else  fFlagQuality.push_back(2); // strange foil
     }   
-    DetectNSparks();
-
+    
     fFlagIsProcessed = kTRUE;
 }
 //---------------------------------------------------------------------------------- 
@@ -203,24 +225,7 @@ Double_t GetMax(Double_t * array, int narray)
     }
     return xmax;
 }
-//---------------------------------------------------------------------------------- 
-/*Double_t MFoil::DetectMeasurementStart()
-{
-    TSpectrum * s = new TSpectrum(10); // expecting less than 10 ramps
-    Double_t * xpeaks;
-    Double_t xpeaks_max[24];
-    Double_t threshold = 0;
-    Int_t nramps;
-    for (Int_t ich = 0; ich < fNumChannels; ich++)
-    {
-        threshold = ((TH1D*)fhChannelPos.At(ich))->GetMaximum()/5.;
-        nramps = s->Search(((TH1D*)fhChannelPos.At(ich)),1,"nobackground",threshold); // don't automatically remove background
 
-        xpeaks_max[ich] = s->GetPositionX()[0];
-    }
-    return GetMax(xpeaks_max, fNumChannels);
-}
-*/
 //----------------------------------------------------------------------------------
 // write own peak detector instead of TSpectrum
 Double_t MFoil::DetectMeasurementStart()
@@ -288,6 +293,20 @@ void MFoil::DetectNSparks()
     }   
 }
 //---------------------------------------------------------------------------------- 
+Double_t MFoil::GetLastSparkPosition(Int_t foil_id)
+{
+	// Needs fhSparks to be initialized 
+	Int_t n = ((TH1D*)fhSparks.At(foil_id))->GetNbinsX();
+	Double_t x = 0;
+	Double_t y = 0;
+	for(int ib=1; ib<=n; ib++)
+	{
+		y = ((TH1D*)fhSparks.At(foil_id))->GetBinContent(ib);
+		if(y > 0) x = ((TH1D*)fhSparks.At(foil_id))->GetBinCenter(ib);
+	}
+	return x;
+}
+//---------------------------------------------------------------------------------- 
 Double_t MFoil::DetectMeasurementStop()
 {
     // count consequitive bins with positive current
@@ -347,11 +366,36 @@ void MFoil::CreateHLimit()
     fHLimit->SetBinContent(1, 5E-10); // limit is 0.5 nA
 }
 //----------------------------------------------------------------------------------
-void MFoil::DrawHLimit()
+// Gets the color code of the foil 
+
+// from Rtypes.h { kWhite =0,   kBlack =1,   kGray=920,
+//				   kRed   =632, kGreen =416, kBlue=600, kYellow=400, kMagenta=616, kCyan=432,
+//                 kOrange=800, kSpring=820, kTeal=840, kAzure =860, kViolet =880, kPink=900 };
+Int_t MFoil::GetProcessedColor(Int_t ich) const 
+{
+	// 0=bad (red), 1=good (green), 2=problematic (orange)
+	Int_t color;
+	
+	if(!fFlagIsProcessed) color=920;
+	else 
+	{
+		switch(fFlagQuality.at(ich))
+		{
+			case 0: color=632+2; break; 
+			case 1: color=416+2; break; 
+			case 2: color=800+2; break; 
+			default: color=920; break; 
+		}
+	}
+	return color;
+}
+	
+//----------------------------------------------------------------------------------
+void MFoil::DrawHLimit(Int_t ich)
 {   
-    fHLimit->SetFillColor(kGreen+1);
-    fHLimit->SetFillStyle(3003);
-    fHLimit->SetLineColor(kGreen+1);
+	fHLimit->SetFillStyle(3003);
+    fHLimit->SetFillColor(GetProcessedColor(ich));    
+    fHLimit->SetLineColor(GetProcessedColor(ich));
     fHLimit->Draw("afh same");
 }
 //----------------------------------------------------------------------------------
