@@ -1,6 +1,5 @@
 #include "mfoil.h"
 
-
 #ifndef MFOIL_CXX
 #define MFOIL_CXX
 
@@ -161,33 +160,33 @@ void MFoil::LoadFoilCurrents(const TString filename)
 void MFoil::ProcessFoilCurrents()
 {   
     if(fFlagIsProcessed)
-	{
-		fSatCurrent.clear();
-		fFlagQuality.clear();
-	}
+    {
+        fSatCurrent.clear();
+        fFlagQuality.clear();
+    }
 
     // get measurement range:
     fMeasurementEnd   = DetectMeasurementStop();
     fMeasurementStart = fMeasurementEnd - 200;  
     
     // estimating saturation current
-	for (Int_t ich = 0; ich < fNumChannels; ++ich)
-	{
-		fSatCurrent.push_back( GetMedian( (TH1D*)fhChannelPos.At(ich) ) );
-	}
-	// detect sparks/ramps
-	DetectNSparks();
-	
-	// correct estimated measurement range to not contain any sparks
-	for (Int_t ich = 0; ich < fNumChannels; ++ich)
-	{
-		Double_t max_spark = GetLastSparkPosition(ich);
-		if(max_spark > fMeasurementStart)
-			fMeasurementStart = max_spark;
-	}
-	
-	// calculate saturation current by averaging the determined and corrected measurement area
-	Double_t satcurrent;
+    for (Int_t ich = 0; ich < fNumChannels; ++ich)
+    {
+        fSatCurrent.push_back( GetMedian( (TH1D*)fhChannelPos.At(ich) ) );
+    }
+    // detect sparks/ramps
+    DetectNSparks();
+    
+    // correct estimated measurement range to not contain any sparks
+    for (Int_t ich = 0; ich < fNumChannels; ++ich)
+    {
+        Double_t max_spark = GetLastSparkPosition(ich);
+        if(max_spark > fMeasurementStart)
+            fMeasurementStart = max_spark;
+    }
+    
+    // calculate saturation current by averaging the determined and corrected measurement area
+    Double_t satcurrent;
     for (Int_t ich = 0; ich < fNumChannels; ++ich)
     {
         Int_t istart  = ((TH1D*)fhChannelPos.At(ich))->FindBin(fMeasurementStart);
@@ -205,12 +204,12 @@ void MFoil::ProcessFoilCurrents()
                 current+=yval;
             }
         }
-		satcurrent = current/Double_t(count);
+        satcurrent = current/Double_t(count);
         fSatCurrent.at(ich) = satcurrent;
-		
-		if(satcurrent>=5E-10) fFlagQuality.push_back(0); // bad foil
-		else if(satcurrent<5E-10 && satcurrent>0) fFlagQuality.push_back(1); // good foil
-		else  fFlagQuality.push_back(2); // strange foil
+        
+        if(satcurrent>=5E-10) fFlagQuality.push_back(0); // bad foil
+        else if(satcurrent<5E-10 && satcurrent>0) fFlagQuality.push_back(1); // good foil
+        else  fFlagQuality.push_back(2); // strange foil
     }   
     
     fFlagIsProcessed = kTRUE;
@@ -295,16 +294,16 @@ void MFoil::DetectNSparks()
 //---------------------------------------------------------------------------------- 
 Double_t MFoil::GetLastSparkPosition(Int_t foil_id)
 {
-	// Needs fhSparks to be initialized 
-	Int_t n = ((TH1D*)fhSparks.At(foil_id))->GetNbinsX();
-	Double_t x = 0;
-	Double_t y = 0;
-	for(int ib=1; ib<=n; ib++)
-	{
-		y = ((TH1D*)fhSparks.At(foil_id))->GetBinContent(ib);
-		if(y > 0) x = ((TH1D*)fhSparks.At(foil_id))->GetBinCenter(ib);
-	}
-	return x;
+    // Needs fhSparks to be initialized 
+    Int_t n = ((TH1D*)fhSparks.At(foil_id))->GetNbinsX();
+    Double_t x = 0;
+    Double_t y = 0;
+    for(int ib=1; ib<=n; ib++)
+    {
+        y = ((TH1D*)fhSparks.At(foil_id))->GetBinContent(ib);
+        if(y > 0) x = ((TH1D*)fhSparks.At(foil_id))->GetBinCenter(ib);
+    }
+    return x;
 }
 //---------------------------------------------------------------------------------- 
 Double_t MFoil::DetectMeasurementStop()
@@ -369,34 +368,34 @@ void MFoil::CreateHLimit()
 // Gets the color code of the foil 
 
 // from Rtypes.h { kWhite =0,   kBlack =1,   kGray=920,
-//				   kRed   =632, kGreen =416, kBlue=600, kYellow=400, kMagenta=616, kCyan=432,
+//                 kRed   =632, kGreen =416, kBlue=600, kYellow=400, kMagenta=616, kCyan=432,
 //                 kOrange=800, kSpring=820, kTeal=840, kAzure =860, kViolet =880, kPink=900 };
 Int_t MFoil::GetProcessedColor(Int_t ich) const 
 {
-	// 0=bad (red), 1=good (green), 2=problematic (orange)
-	Int_t color;
-	
-	if(!fFlagIsProcessed) color=920;
-	else 
-	{
-		switch(fFlagQuality.at(ich))
-		{
-			case 0: color=632+2; break; 
-			case 1: color=416+2; break; 
-			case 2: color=800+2; break; 
-			default: color=920; break; 
-		}
-	}
-	return color;
+    // 0=bad (red), 1=good (green), 2=problematic (orange)
+    Int_t color;
+    
+    if(!fFlagIsProcessed) color=920;
+    else 
+    {
+        switch(fFlagQuality.at(ich))
+        {
+            case 0: color=632+2; break; 
+            case 1: color=416+2; break; 
+            case 2: color=800+2; break; 
+            default: color=920; break; 
+        }
+    }
+    return color;
 }
-	
+    
 //----------------------------------------------------------------------------------
 void MFoil::DrawHLimit(Int_t ich)
 {   
-	fHLimit->SetFillStyle(3003);
+    fHLimit->SetFillStyle(3003);
     fHLimit->SetFillColor(GetProcessedColor(ich));    
     fHLimit->SetLineColor(GetProcessedColor(ich));
-    fHLimit->Draw("afh same");
+    fHLimit->Draw("h same");
 }
 //----------------------------------------------------------------------------------
 void  MFoil::DrawSatCurrent(Int_t ich)
@@ -418,19 +417,56 @@ void  MFoil::DrawMeasurementRange(Int_t ich)
     lrangeHigh->Draw();
 }
 //----------------------------------------------------------------------------------
-void MFoil::DrawHChannel(Int_t ich, TString opt)
+void MFoil::DrawHChannel(Int_t ich, TString opt, TCanvas * c)
 {
-    ((TH1D*)fhChannelPos.At(ich))->SetLineColor(kBlue);
-    fhChannelPos.At(ich)->Draw(opt);
+    TH1D * h = ((TH1D*)fhChannelPos.At(ich));
+
+    SetPadMargins(c);
+    SetAxisStyle(h);
+
+    h->SetXTitle("time [sec]"); 
+    h->SetYTitle("leakage current [A]"); 
+    h->SetLineColor(kBlue);
+
+    h->Draw(opt);
 }
 //----------------------------------------------------------------------------------
-void MFoil::DrawStdDev(Int_t ich, TString opt)
+void MFoil::SetPadMargins(TCanvas * c)
 {
+    TVirtualPad * p = c->GetPad(0);
+    p->SetLeftMargin(0.15);
+    p->SetRightMargin(0.06);
+    p->SetTopMargin(0.06);
+    p->SetBottomMargin(0.15);
+}
+//----------------------------------------------------------------------------------
+void MFoil::SetAxisStyle(TH1D * h)
+{
+    TAxis * ax = h->GetXaxis();
+    TAxis * ay = h->GetYaxis();
+    
+    ax->SetTitleOffset(1.1);
+    ax->SetLabelOffset(0.01);
+    ay->SetTitleOffset(1.1);
+    ay->SetLabelOffset(0.01);
+    ax->SetTitleSize(0.06);
+    ay->SetTitleSize(0.06);
+}
+//----------------------------------------------------------------------------------
+void MFoil::DrawStdDev(Int_t ich, TString opt, TCanvas * c)
+{
+    TH1D * h = ((TH1D*)fhChStdDev.At(ich));
+    h->SetXTitle("#sigma(I): median-value"); 
+    h->SetYTitle("occurence"); 
+    
+    SetPadMargins(c);
+    SetAxisStyle(h);
+    
     //Double_t xmin = GetXlimits( ((TH1D*)fhChStdDev.At(ich)) )[0];
     //Double_t xmax = GetXlimits( ((TH1D*)fhChStdDev.At(ich)) )[1];
     //((TH1D*)fhChStdDev.At(ich))->GetXaxis()->SetLimits(xmin,xmax);
     //std::cout << "setting hist limits: " << xmin << " " << xmax << std::endl;
-    ((TH1D*)fhChStdDev.At(ich))->Draw(opt);
+    h->Draw(opt);
     //((TH1D*)fhChStdDev.At(ich))->Print();
 }
 //----------------------------------------------------------------------------------

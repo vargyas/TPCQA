@@ -200,8 +200,8 @@ public:
 
     void CreateHLimit(); ///<
     void DrawHLimit(Int_t ich);
-    void DrawHChannel(Int_t id, TString opt);
-    void DrawStdDev(Int_t ich, TString opt);
+    void DrawHChannel(Int_t id, TString opt, TCanvas * c);
+    void DrawStdDev(Int_t ich, TString opt, TCanvas * c);
     void DrawSatCurrent(Int_t ich);
     void DrawMeasurementRange(Int_t ich);
     void DrawSparks(Int_t ich, TString opt);
@@ -210,10 +210,12 @@ public:
     Double_t DetectMeasurementStop();
     void DetectNSparks();
     Double_t EstimateSatCurrent(Int_t id);
-	
-	Int_t GetProcessedColor(Int_t ich) const ;
-	Double_t GetLastSparkPosition(Int_t ich);
+    
+    Int_t GetProcessedColor(Int_t ich) const ;
+    Double_t GetLastSparkPosition(Int_t ich);
 
+    void SetPadMargins(TCanvas * c);
+    void SetAxisStyle(TH1D * h);
     
     //ClassDef(MFoil, 1);
 };

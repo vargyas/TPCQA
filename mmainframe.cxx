@@ -59,10 +59,6 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     help->Resize(40, 40);
     toolbar->AddFrame(help, new TGLayoutHints(kLHintsCenterX)); 
     
-    //  Create a top bar to hold info and more elaborate commands
-    //  TGHorizontalFrame *topbar = new TGHorizontalFrame(fMain,w,0);
-    //  fMain->AddFrame(topbar, new TGLayoutHints(kLHintsCenterX | kLHintsTop  ));
-    
     // Add frames to main frame
 
     fMain->AddFrame(fEcanvasAll, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
@@ -113,7 +109,7 @@ void MMainFrame::DrawStdDevs()
         cdiv[ich] = (TPad*) fCanv->GetListOfPrimitives()->FindObject(Form("EcanvasAll_%d",ich+1));
         cdiv[ich]->SetName(Form("CH%d",ich+1));
         cdiv[ich]->cd();
-        fFoil->DrawStdDev(ich, "hist");     
+        fFoil->DrawStdDev(ich, "hist", fCanv);     
     }
     fCanv->Modified();
     fCanv->Update();
@@ -138,7 +134,7 @@ void MMainFrame::DrawFoilCurrents()
         cdiv[ich]->cd();
         
         cdiv[ich]->SetLogy();
-        fFoil->DrawHChannel(ich, "hist");
+        fFoil->DrawHChannel(ich, "hist", fCanv);
         fFoil->DrawHLimit(ich);
                 
         if(fFoil->GetProcessedStatus()) 
@@ -278,7 +274,8 @@ void MMainFrame::DrawFoilCurrent(Int_t foil_id)
 {
     fCanv = fEcanvasAll->GetCanvas();
     fCanv->Clear();
-    fFoil->DrawHChannel(foil_id, "hist");
+
+    fFoil->DrawHChannel(foil_id, "hist", fCanv);
     fFoil->DrawHLimit(foil_id);
 
     fCanv->SetLogy();
@@ -368,7 +365,7 @@ void MDialog::DrawFoilCurrent(Int_t foil_id, MFoil * foil)
     fCanv = fECanvasCh->GetCanvas();
     //fCanv = fEcanvasCh[foil_id]->GetCanvas();
     fCanv->Clear();
-    foil->DrawHChannel(foil_id, "hist");
+    foil->DrawHChannel(foil_id, "hist", fCanv);
     foil->DrawHLimit(foil_id);
 
     fCanv->SetLogy();

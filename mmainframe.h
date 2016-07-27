@@ -7,7 +7,7 @@ RQ_OBJECT("MMainFrame")
 private:
     TGMainFrame         * fMain;
     TGStatusBar         * fStatusBar;
-    TCanvas             * fCanv;
+
     TGPictureButton     * load, * execute, * save, * quit, * help;
     TGHorizontalFrame   * toolbar;
     TGTab               * fTab;
@@ -16,6 +16,7 @@ protected:
     MFoil               * fFoil;
 
 public:
+    TCanvas             * fCanv;
     TRootEmbeddedCanvas * fEcanvasAll;
 
     MMainFrame(const TGWindow *p, UInt_t w, UInt_t h);
@@ -44,9 +45,10 @@ RQ_OBJECT("MDialog")
 
 private:
     TGTransientFrame    * fMain;
-    TCanvas             * fCanv;
 
 public:
+    TCanvas             * fCanv;
+
     MDialog(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h);
     virtual ~MDialog();
     TRootEmbeddedCanvas * fECanvasCh;
