@@ -25,6 +25,11 @@ MFoil::MFoil() :
     fCurrents(0)
 {
     // default constructor
+	fhChannel.SetOwner(kTRUE);
+	fhChannel.SetOwner(kTRUE);
+	fhChStdDev.SetOwner(kTRUE);
+	fhSparks.SetOwner(kTRUE);
+
     CreateHLimit();
 }
 //----------------------------------------------------------------------------------
@@ -73,13 +78,13 @@ void MFoil::LoadFoilCurrents(const TString filename)
     // clear histogram array before loading, if loaded already
     if (fFlagIsLoaded) {
         std::cout << "clearing fhChannel\n";
-        for (Int_t ich = 0; ich<fNumChannels; ich++)
-        {
-            delete fhChannel.At(ich);
-            delete fhChannelPos.At(ich);
-            delete fhChStdDev.At(ich);
-            delete fhSparks.At(ich);
-        }
+		//for (Int_t ich = 0; ich<fNumChannels; ich++)
+		//{
+		//	delete fhChannel.At(ich);
+		//	delete fhChannelPos.At(ich);
+		//	delete fhChStdDev.At(ich);
+		//	delete fhSparks.At(ich);
+		//}
         fhChannel.Clear(); 
         fhChannelPos.Clear(); 
         fhChStdDev.Clear();
@@ -88,52 +93,48 @@ void MFoil::LoadFoilCurrents(const TString filename)
     Int_t ndata = 0;
     std::ifstream inFile;
     inFile.open(fInFileName);
-    std::string line;
+	std::string title;
 
     TString dat;
     std::vector<TString> date;
     
-    std::string tim;
-    std::vector<Double_t> times, times_shift, current_temp;
-    times.reserve(1000); times_shift.reserve(1000); current_temp.reserve(1000);
+	std::string tim[3]; // dummy time (not used at the moment)
+	Double_t time_shift;
+	Double_t foilV, foilI;
+	std::vector<Double_t> times_shift, current_temp;
+	times_shift.reserve(1000); current_temp.reserve(24);
     date.reserve(1000);
     
     Double_t c[24];
 
-    // open file and load currents
+	// open file and load currents with the GSI dataformat:
+	// Date/C : Time : TimeStamp/D : time : VMeas : IMeas : I_00:I_01:I_02:I_03:I_04:I_05:I_06:I_07:I_08:I_09:I_10:I_11:I_12:I_13:I_14:I_15:I_16:I_17:I_18:I_19:I_20:I_21:I_22:I_23
+
+	// read that title
+	getline(inFile, title);
+
     while ( !inFile.eof() )
-    {
-        inFile >> dat >> tim;
-        for (Int_t ich = 0; ich < 24; ich++) { inFile >> c[ich]; } // file contains 24 values regardless of actual channels
+	{
+		inFile >> tim[0] >> tim[1] >> time_shift >> tim[2] >> foilV >> foilI;
+		for (Int_t ich = 0; ich < 24; ich++) { inFile >> c[ich]; } // file contains 24 values regardless of actual channels
+		date.push_back( dat );
+		times_shift.push_back(time_shift);
+		times_shift[ndata]-=times_shift[0];
 
-        date.push_back(dat);
+		for (Int_t ich = 0; ich < fNumChannels; ich++) { current_temp.push_back(c[ich]); }
 
-        if(kFALSE)
-        {
-            //times.push_back(String2Sec(tim));
-            // check eof this way, line.empty() is true for every second line... (?)
-            if (ndata > 1) {
-                if (times[ndata] == times[ndata - 1]) {
-                    break;
-                }
-            }
-            //times_shift.push_back(times[ndata] - times[0]);
-        }
-        times_shift.push_back(ndata/2.);
-        
-        for (Int_t ich = 0; ich < fNumChannels; ich++) { current_temp.push_back(c[ich]); }
+		fCurrents.push_back(current_temp);
+		current_temp.clear();
 
-        fCurrents.push_back(current_temp);
-        current_temp.clear();
+		++ndata;
+	}
 
-        ++ndata;
-    } 
     // fill histogram array
     for (Int_t ich = 0; ich<fNumChannels; ich++)
     {
-        fhChannel.Add(new TH1D(Form("h_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25));
-        fhChannelPos.Add(new TH1D(Form("h_pos_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25));
-        fhSparks.Add(new TH1D(Form("h_spark%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25));
+		fhChannel.Add( new TH1D(Form("h_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25) );
+		fhChannelPos.Add( new TH1D(Form("h_pos_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25) );
+		fhSparks.Add( new TH1D(Form("h_spark%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25) );
         
         for(Int_t it=0; it<ndata; it++)
         {
@@ -207,8 +208,8 @@ void MFoil::ProcessFoilCurrents()
         satcurrent = current/Double_t(count);
         fSatCurrent.at(ich) = satcurrent;
         
-        if(satcurrent>=5E-10) fFlagQuality.push_back(0); // bad foil
-        else if(satcurrent<5E-10 && satcurrent>0) fFlagQuality.push_back(1); // good foil
+		if(satcurrent>=0.5) fFlagQuality.push_back(0); // bad foil
+		else if(satcurrent<0.5 && satcurrent>0) fFlagQuality.push_back(1); // good foil
         else  fFlagQuality.push_back(2); // strange foil
     }   
     
@@ -347,7 +348,7 @@ Bool_t MFoil::GetLoadedStatus() const { return fFlagIsLoaded; }
 //----------------------------------------------------------------------------------
 TString MFoil::GetInfoSatCurrent(Int_t foil_id) const
 {
-    return Form("I_{sat} = %.3f nA\n",fSatCurrent[foil_id]*1E9);
+	return Form("I_{sat} = %.3f nA\n",fSatCurrent[foil_id]);
 }
 //----------------------------------------------------------------------------------
 TString MFoil::GetInfoNumSparks(Int_t foil_id) const
@@ -362,7 +363,7 @@ TString MFoil::GetName() const { return fName; }
 void MFoil::CreateHLimit()
 {
     fHLimit = new TH1D("hLimit", "", 1, 0, 1E7);
-    fHLimit->SetBinContent(1, 5E-10); // limit is 0.5 nA
+	fHLimit->SetBinContent(1, 0.5); // limit is 0.5 nA
 }
 //----------------------------------------------------------------------------------
 // Gets the color code of the foil 
@@ -423,12 +424,12 @@ void MFoil::DrawHChannel(Int_t ich, TString opt, TCanvas * c)
 
     SetPadMargins(c);
     SetAxisStyle(h);
-
     h->SetXTitle("time [sec]"); 
-    h->SetYTitle("leakage current [A]"); 
+	h->SetYTitle("leakage current [nA]");
     h->SetLineColor(kBlue);
 
     h->Draw(opt);
+	c->Update();
 }
 //----------------------------------------------------------------------------------
 void MFoil::SetPadMargins(TCanvas * c)
@@ -438,6 +439,7 @@ void MFoil::SetPadMargins(TCanvas * c)
     p->SetRightMargin(0.06);
     p->SetTopMargin(0.06);
     p->SetBottomMargin(0.15);
+	p->Update();
 }
 //----------------------------------------------------------------------------------
 void MFoil::SetAxisStyle(TH1D * h)
