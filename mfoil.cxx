@@ -26,7 +26,7 @@ MFoil::MFoil() :
 {
     // default constructor
 	fhChannel.SetOwner(kTRUE);
-	fhChannel.SetOwner(kTRUE);
+	fhChannelPos.SetOwner(kTRUE);
 	fhChStdDev.SetOwner(kTRUE);
 	fhSparks.SetOwner(kTRUE);
 
@@ -100,6 +100,7 @@ void MFoil::LoadFoilCurrents(const TString filename)
     
 	std::string tim[3]; // dummy time (not used at the moment)
 	Double_t time_shift;
+    Double_t time_start;
 	Double_t foilV, foilI;
 	std::vector<Double_t> times_shift, current_temp;
 	times_shift.reserve(1000); current_temp.reserve(24);
@@ -119,7 +120,8 @@ void MFoil::LoadFoilCurrents(const TString filename)
 		for (Int_t ich = 0; ich < 24; ich++) { inFile >> c[ich]; } // file contains 24 values regardless of actual channels
 		date.push_back( dat );
 		times_shift.push_back(time_shift);
-		times_shift[ndata]-=times_shift[0];
+        if(ndata==0) time_start = times_shift[0]; 
+		times_shift[ndata]-=time_start;
 
 		for (Int_t ich = 0; ich < fNumChannels; ich++) { current_temp.push_back(c[ich]); }
 
@@ -130,28 +132,34 @@ void MFoil::LoadFoilCurrents(const TString filename)
 	}
 
     // fill histogram array
+    // discard last data if not even (histogram has ndata+1 bins...)
+    if((ndata+1)%2!=0) { cout << "DISCARD LAST DATA\n"; ndata = ndata-1;}
+
+    Double_t width = (times_shift[1]-times_shift[0])/2.;
+    Double_t xmin  = *min_element(std::begin(times_shift), std::end(times_shift)) - width;
+    Double_t xmax  = *max_element(std::begin(times_shift), std::end(times_shift)) + width;
+
     for (Int_t ich = 0; ich<fNumChannels; ich++)
     {
-		fhChannel.Add( new TH1D(Form("h_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25) );
-		fhChannelPos.Add( new TH1D(Form("h_pos_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25) );
-		fhSparks.Add( new TH1D(Form("h_spark%d", ich+1), Form("CH %d", ich+1), ndata+1, -0.25, double(ndata)/2. + 0.25) );
+		fhChannel.Add( new TH1D(Form("h_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, xmin, xmax) );
+		fhChannelPos.Add( new TH1D(Form("h_pos_ch%d", ich+1), Form("CH %d", ich+1), ndata+1, xmin, xmax) );
+		fhSparks.Add( new TH1D(Form("h_spark%d", ich+1), Form("CH %d", ich+1), ndata+1, xmin, xmax) );
         
         for(Int_t it=0; it<ndata; it++)
         {
             ((TH1D*)fhChannel.At(ich))->SetBinContent(it+1, fCurrents[it][ich]);
-            ((TH1D*)fhChannel.At(ich))->SetBinError(it+1, 1E-10);
-            //((TH1D*)fhChannelPos.At(ich))->SetBinContent(it+1, TMath::Abs(fCurrents[it][ich]));
+            ((TH1D*)fhChannel.At(ich))->SetBinError(it+1, TMath::Sqrt(TMath::Abs(fCurrents[it][ich])));
             ((TH1D*)fhChannelPos.At(ich))->SetBinContent(it+1, -1.*(fCurrents[it][ich]));
-            ((TH1D*)fhChannelPos.At(ich))->SetBinError(it+1, 1E-10);
+            ((TH1D*)fhChannelPos.At(ich))->SetBinError(it+1, TMath::Sqrt(TMath::Abs(fCurrents[it][ich])));
         }
 
         // create and fill std dev. histogram
         Double_t val = 0;
-        Double_t median = GetMedian( (TH1D*)fhChannelPos.At(ich) );
+        Double_t median = GetMedian( (TH1D*)fhChannel.At(ich) );
         fhChStdDev.Add(new TH1D(Form("h_stddev%d", ich+1), Form("CH %d", ich+1), ndata+1, -3.*TMath::Abs(median), 3.*TMath::Abs(median)));
         for(Int_t it=0; it<ndata; it++)
         {
-            val = ((TH1D*)fhChannelPos.At(ich))->GetBinContent(it+1);
+            val = ((TH1D*)fhChannel.At(ich))->GetBinContent(it+1);
             ((TH1D*)fhChStdDev.At(ich))->Fill( (median-val) );
         }
     }
@@ -168,37 +176,46 @@ void MFoil::ProcessFoilCurrents()
 
     // get measurement range:
     fMeasurementEnd   = DetectMeasurementStop();
-    fMeasurementStart = fMeasurementEnd - 200;  
+    fMeasurementStart = 0; // will be reset after saturation current estimation
     
     // estimating saturation current
     for (Int_t ich = 0; ich < fNumChannels; ++ich)
     {
-        fSatCurrent.push_back( GetMedian( (TH1D*)fhChannelPos.At(ich) ) );
+        fSatCurrent.push_back( GetMedian( (TH1D*)fhChannel.At(ich) ) );
+        // rebin to reduce fluctuations:
+        //((TH1D*)fhChannelPos.At(ich))->Rebin(2);
+        //((TH1D*)fhChannelPos.At(ich))->Scale(1./2.);
     }
+
     // detect sparks/ramps
-    DetectNSparks();
+    DetectSparks(fMeasurementEnd);
     
-    // correct estimated measurement range to not contain any sparks
+    // reset measurement start to happen after the last spark
+    fMeasurementStart = DetectMeasurementStart();
+
+    // correct estimated measurement range: 
+    // get last spark of all channels
     for (Int_t ich = 0; ich < fNumChannels; ++ich)
     {
         Double_t max_spark = GetLastSparkPosition(ich);
         if(max_spark > fMeasurementStart)
             fMeasurementStart = max_spark;
     }
+    std::cout << "Measurement range: "<<fMeasurementStart << "-" << fMeasurementEnd << " s" << std::endl;
     
     // calculate saturation current by averaging the determined and corrected measurement area
     Double_t satcurrent;
     for (Int_t ich = 0; ich < fNumChannels; ++ich)
     {
-        Int_t istart  = ((TH1D*)fhChannelPos.At(ich))->FindBin(fMeasurementStart);
-        Int_t istop   = ((TH1D*)fhChannelPos.At(ich))->FindBin(fMeasurementEnd);
+        Int_t istart  = ((TH1D*)fhChannel.At(ich))->FindBin(fMeasurementStart);
+        Int_t istop   = ((TH1D*)fhChannel.At(ich))->FindBin(fMeasurementEnd);
         Int_t count   = 0;
         Double_t yval = 0;
         Double_t current = 0;
 
         for(Int_t ib=istart; ib<istop; ++ib)
         {
-            yval = ((TH1D*)fhChannelPos.At(ich))->GetBinContent(ib);
+            yval = ((TH1D*)fhChannel.At(ich))->GetBinContent(ib);
             if(yval>0)
             {
                 ++count;
@@ -230,7 +247,7 @@ Double_t GetMax(Double_t * array, int narray)
 // write own peak detector instead of TSpectrum
 Double_t MFoil::DetectMeasurementStart()
 { 
-    return 22;
+    return GetLastSparkPosition(0); 
 }
 //----------------------------------------------------------------------------------
 Double_t MFoil::EstimateSatCurrent(Int_t foil_id)
@@ -242,7 +259,7 @@ Double_t MFoil::EstimateSatCurrent(Int_t foil_id)
     Double_t yval = 0;
     for(Int_t ib=0; ib<n; ++ib)
     {
-        yval = ((TH1D*)fhChannelPos.At(foil_id))->GetBinContent(ib);
+        yval = ((TH1D*)fhChannel.At(foil_id))->GetBinContent(ib);
         if(yval > 0)
         {
             ++npos;
@@ -253,11 +270,11 @@ Double_t MFoil::EstimateSatCurrent(Int_t foil_id)
 }
 
 //----------------------------------------------------------------------------------
-void MFoil::DetectNSparks()
+void MFoil::DetectSparks(Double_t xmax)
 {
     // Definition of a spark: if 1 bin is 10X larger than the saturation current.
     // Needs fSatCurrent to be initialized.
-    Int_t n = ((TH1D*)fhChannelPos.At(0))->GetNbinsX();
+    Int_t n = ((TH1D*)fhChannel.At(0))->FindBin(xmax);
     Int_t required_time = 1;
     
     for (Int_t ich = 0; ich < fNumChannels; ++ich)
@@ -265,27 +282,31 @@ void MFoil::DetectNSparks()
         Int_t count = 0;
         Int_t spark = 0;
         Double_t yspark = 0;
+        Double_t xval = 0;
         Double_t yval = 0;
-        //Double_t mean = EstimateSatCurrent(ich);
+
         for(int ib=1; ib<=n; ib++)
         {
             ((TH1D*)fhSparks.At(ich))->SetBinContent(ib, 0.0); // init
-            yval = ((TH1D*)fhChannelPos.At(ich))->GetBinContent(ib);
-            if(yval > 10.*fSatCurrent[ich])
+            yval = ((TH1D*)fhChannel.At(ich))->GetBinContent(ib);
+            //if(TMath::Abs(yval) > 10.*TMath::Abs(fSatCurrent[ich]))
+            if(TMath::Abs(yval) > 100)
             {
                 ++count; 
                 if(count > required_time && count < 10)
                 {
-                    if(count == required_time+1) ++spark;
+                    ++spark;
                     // set the bins backwards
                     for(Int_t i=0; i<required_time; ++i)
                     {
-                        yspark = ((TH1D*)fhChannelPos.At(ich))->GetBinContent(ib-i);
+                        xval = ((TH1D*)fhChannel.At(ich))->GetBinCenter(ib-i);
+                        yspark = ((TH1D*)fhChannel.At(ich))->GetBinContent(ib-i);
                         ((TH1D*)fhSparks.At(ich))->SetBinContent(ib-i, yspark);
                     }
                 }
             }
-            else { 
+            else 
+            { 
                 count = 0; 
             }
         }
@@ -296,13 +317,15 @@ void MFoil::DetectNSparks()
 Double_t MFoil::GetLastSparkPosition(Int_t foil_id)
 {
     // Needs fhSparks to be initialized 
-    Int_t n = ((TH1D*)fhSparks.At(foil_id))->GetNbinsX();
+    Int_t n = ((TH1D*)fhSparks.At(foil_id))->FindBin(fMeasurementEnd-3);
     Double_t x = 0;
     Double_t y = 0;
-    for(int ib=1; ib<=n; ib++)
+    Double_t e = 0.01;
+    for(int ib=1; ib<n; ib++)
     {
         y = ((TH1D*)fhSparks.At(foil_id))->GetBinContent(ib);
-        if(y > 0) x = ((TH1D*)fhSparks.At(foil_id))->GetBinCenter(ib);
+        // fhSparks is filled with zeros by default, finding the sparks is easy:
+        if(TMath::Abs(y) > TMath::Abs(0+e)) x = ((TH1D*)fhSparks.At(foil_id))->GetBinCenter(ib);
     }
     return x;
 }
@@ -362,8 +385,12 @@ TString MFoil::GetName() const { return fName; }
 //----------------------------------------------------------------------------------
 void MFoil::CreateHLimit()
 {
-    fHLimit = new TH1D("hLimit", "", 1, 0, 1E7);
-	fHLimit->SetBinContent(1, 0.5); // limit is 0.5 nA
+    fHLimit = new TH1D("hLimit", "", 1000, -1, 1E5);
+    for(Int_t ib=1; ib<1000; ib++)
+    {
+	    fHLimit->SetBinContent(ib, 0.0); 
+        fHLimit->SetBinError(ib, 0.5); // limit is 0.5 nA
+    }
 }
 //----------------------------------------------------------------------------------
 // Gets the color code of the foil 
@@ -396,7 +423,7 @@ void MFoil::DrawHLimit(Int_t ich)
     fHLimit->SetFillStyle(3003);
     fHLimit->SetFillColor(GetProcessedColor(ich));    
     fHLimit->SetLineColor(GetProcessedColor(ich));
-    fHLimit->Draw("h same");
+    fHLimit->Draw("E3 same");
 }
 //----------------------------------------------------------------------------------
 void  MFoil::DrawSatCurrent(Int_t ich)
@@ -420,7 +447,7 @@ void  MFoil::DrawMeasurementRange(Int_t ich)
 //----------------------------------------------------------------------------------
 void MFoil::DrawHChannel(Int_t ich, TString opt, TCanvas * c)
 {
-    TH1D * h = ((TH1D*)fhChannelPos.At(ich));
+    TH1D * h = ((TH1D*)fhChannel.At(ich));
 
     SetPadMargins(c);
     SetAxisStyle(h);
@@ -429,6 +456,7 @@ void MFoil::DrawHChannel(Int_t ich, TString opt, TCanvas * c)
     h->SetLineColor(kBlue);
 
     h->Draw(opt);
+    h->GetYaxis()->SetRangeUser(-1,1);
 	c->Update();
 }
 //----------------------------------------------------------------------------------

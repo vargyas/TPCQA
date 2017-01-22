@@ -208,7 +208,7 @@ public:
 
     Double_t DetectMeasurementStart();
     Double_t DetectMeasurementStop();
-    void DetectNSparks();
+    void DetectSparks(Double_t xmax);
     Double_t EstimateSatCurrent(Int_t id);
     
     Int_t GetProcessedColor(Int_t ich) const ;

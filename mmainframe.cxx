@@ -133,7 +133,7 @@ void MMainFrame::DrawFoilCurrents()
         cdiv[ich]->SetName(Form("CH%d",ich+1));
         cdiv[ich]->cd();
         
-        cdiv[ich]->SetLogy();
+        cdiv[ich]->SetLogy(0);
         fFoil->DrawHChannel(ich, "hist", fCanv);
         fFoil->DrawHLimit(ich);
                 
@@ -232,7 +232,7 @@ void MMainFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
 
 void MMainFrame::LoadCurrentFile()
 {   
-    static  TString dir("../data");
+    static  TString dir("../data/");
     TGFileInfo fi;
     fi.fFileTypes = filetypes;
     fi.fIniDir    = StrDup(dir);
@@ -278,7 +278,7 @@ void MMainFrame::DrawFoilCurrent(Int_t foil_id)
     fFoil->DrawHChannel(foil_id, "hist", fCanv);
     fFoil->DrawHLimit(foil_id);
 
-    fCanv->SetLogy();
+    fCanv->SetLogy(0);
     gStyle->SetOptStat(0);
 
     if(fFoil->GetProcessedStatus())
@@ -368,7 +368,7 @@ void MDialog::DrawFoilCurrent(Int_t foil_id, MFoil * foil)
     foil->DrawHChannel(foil_id, "hist", fCanv);
     foil->DrawHLimit(foil_id);
 
-    fCanv->SetLogy();
+    fCanv->SetLogy(0);
     gStyle->SetOptStat(0);
 
     if(foil->GetProcessedStatus())
