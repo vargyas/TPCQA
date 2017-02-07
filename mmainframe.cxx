@@ -11,9 +11,27 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     // Create main frame
     fMain = new TGMainFrame(p,w,h);
 
-    // Create canvas widget 
-    fEcanvasAll = new TRootEmbeddedCanvas("EcanvasAll",fMain,w-20,h-120);
-    
+    // Create tabs
+    fTab = new TGTab(fMain, 300, 300);
+    fTab->Connect("Selected(Int_t)", "MMainFrame", this, "DoTab(Int_t)");
+    fIPlot = 0;
+
+    TGCompositeFrame *tf;
+    tf= fTab->AddTab("STD");
+    fCF[0] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
+    fEcanvasAll[0] = new TRootEmbeddedCanvas("EcanvasAll",fCF[0],w-20,h-120);
+    tf->AddFrame(fCF[0], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
+    tf = fTab->AddTab("TIME");
+    fCF[1] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
+    fEcanvasAll[1] = new TRootEmbeddedCanvas("EcanvasAll",fCF[1],w-20,h-120);
+    tf->AddFrame(fCF[1], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
+    tf = fTab->AddTab("CORR");
+    fCF[2] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
+    fEcanvasAll[2] = new TRootEmbeddedCanvas("EcanvasAll",fCF[2],w-20,h-120);
+    tf->AddFrame(fCF[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
     // status bar
     fStatusBar = new TGStatusBar(fMain, 60, 10, kVerticalFrame);
     //Int_t parts[] = {30, 10, 15};
@@ -21,10 +39,12 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     fStatusBar->SetParts(3);
     fStatusBar->Draw3DCorner(kFALSE);
 
-    fCanv = fEcanvasAll->GetCanvas();
-    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MMainFrame",this,
-                   "DrawFoilCurrent(Int_t,Int_t,Int_t,TObject*)");
-    
+    for(Int_t itab=0; itab<3; itab++)
+    {
+        fCanv = fEcanvasAll[itab]->GetCanvas();
+        fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MMainFrame",this,
+                       "ZoomFoil(Int_t,Int_t,Int_t)");
+    }
     // Create a horizontal frame widget with buttons
     toolbar = new TGHorizontalFrame(fMain,w,0);
 
@@ -61,7 +81,14 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     
     // Add frames to main frame
 
-    fMain->AddFrame(fEcanvasAll, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[0]->AddFrame(fEcanvasAll[0], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[1]->AddFrame(fEcanvasAll[1], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[2]->AddFrame(fEcanvasAll[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
+    fMain->AddFrame(fTab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
+
+    //fMain->AddFrame(fEcanvasAll, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
     
     fMain->AddFrame(fStatusBar, new TGLayoutHints(kLHintsExpandX) );
 
@@ -75,6 +102,11 @@ MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
     fMain->Resize(fMain->GetDefaultSize());
     // Map main frame
     fMain->MapWindow();
+}
+
+void MMainFrame::DoTab(Int_t itab)
+{
+    fIPlot=itab;
 }
 
 MMainFrame::~MMainFrame()
@@ -93,33 +125,39 @@ MMainFrame::~MMainFrame()
     delete fMain;
 }
 
-void MMainFrame::DrawStdDevs()
+void MMainFrame::DrawCurrentStdOverview()
 {
     Int_t type = fFoil->GetType();
-    fCanv = fEcanvasAll->GetCanvas();
+    fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->Clear();
 
     if(type==0 || type==4) fCanv->Divide(3, 6, 0, 0); // IROC and for unidentified foil
     if(type>=1 && type<=3) fCanv->Divide(4, 6, 0, 0); // OROC 1, 2, 3 
 
     TPad* cdiv[24];
+    TVirtualPad* pad = fCanv->GetPadSave();
+    pad->SetBottomMargin(0.3);
     gStyle->SetOptStat(0);
     for(int ich=0; ich<fFoil->GetNC(); ich++)
     {
         cdiv[ich] = (TPad*) fCanv->GetListOfPrimitives()->FindObject(Form("EcanvasAll_%d",ich+1));
-        cdiv[ich]->SetName(Form("CH%d",ich+1));
+        cdiv[ich]->SetName(Form("CH%d",ich));
         cdiv[ich]->cd();
-        fFoil->DrawStdDev(ich, "hist", fCanv);     
+        fFoil->DrawCurrentStd(ich, fCanv);
+        fFoil->DrawHLimitStd(ich);
     }
+
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MMainFrame",this,
+                   "EventInfo(Int_t,Int_t,Int_t,TObject*)");
+
     fCanv->Modified();
     fCanv->Update();
 }
 
-void MMainFrame::DrawFoilCurrents()
+void MMainFrame::DrawCurrentTimeOverview()
 {
-    //std::cout << "DrawFoilCurrents \n";
     Int_t type = fFoil->GetType();
-    fCanv = fEcanvasAll->GetCanvas();
+    fCanv = fEcanvasAll[1]->GetCanvas();
     fCanv->Clear();
 
     if(type==0 || type==4) fCanv->Divide(3, 6, 0, 0); // IROC and for unidentified foil
@@ -130,19 +168,12 @@ void MMainFrame::DrawFoilCurrents()
     for(int ich=0; ich<fFoil->GetNC(); ich++)
     {
         cdiv[ich] = (TPad*) fCanv->GetListOfPrimitives()->FindObject(Form("EcanvasAll_%d",ich+1));
-        cdiv[ich]->SetName(Form("CH%d",ich+1));
+        cdiv[ich]->SetName(Form("CH%d",ich));
         cdiv[ich]->cd();
         
         cdiv[ich]->SetLogy(0);
-        fFoil->DrawHChannel(ich, "hist", fCanv);
-        fFoil->DrawHLimit(ich);
-                
-        if(fFoil->GetProcessedStatus()) 
-        {
-            fFoil->DrawSatCurrent(ich);
-            fFoil->DrawMeasurementRange(ich);
-            fFoil->DrawSparks(ich,"hist same");
-        }
+
+        fFoil->DrawCurrentTimeAll(ich, fCanv);
     }
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MMainFrame",this,
                    "EventInfo(Int_t,Int_t,Int_t,TObject*)");
@@ -170,8 +201,8 @@ void MMainFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
 // returns the pad on which the mouse have clicked
 Int_t MMainFrame::ClickedOnPad(Int_t px, Int_t py)
 {
-    UInt_t h = fEcanvasAll->GetHeight();
-    UInt_t w = fEcanvasAll->GetWidth();
+    UInt_t h = fEcanvasAll[fIPlot]->GetHeight();
+    UInt_t w = fEcanvasAll[fIPlot]->GetWidth();
     
     Int_t nrows, ncolumns;
     switch(fFoil->GetType())
@@ -206,8 +237,8 @@ Int_t MMainFrame::ClickedOnPad(Int_t px, Int_t py)
 // (inverse of ClickedOnPad())
 void MMainFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
 {   
-    UInt_t h = fEcanvasAll->GetHeight();
-    UInt_t w = fEcanvasAll->GetWidth();
+    UInt_t h = fEcanvasAll[fIPlot]->GetHeight();
+    UInt_t w = fEcanvasAll[fIPlot]->GetWidth();
     
     Int_t nrows, ncolumns;
     switch(fFoil->GetType())
@@ -232,7 +263,7 @@ void MMainFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
 
 void MMainFrame::LoadCurrentFile()
 {   
-    static  TString dir("../data/");
+    static  TString dir("./");
     TGFileInfo fi;
     fi.fFileTypes = filetypes;
     fi.fIniDir    = StrDup(dir);
@@ -243,7 +274,8 @@ void MMainFrame::LoadCurrentFile()
         printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
         dir = fi.fIniDir;
         fFoil->LoadFoilCurrents(fi.fFilename);
-        DrawFoilCurrents();
+        DrawCurrentStdOverview();
+        DrawCurrentTimeOverview();
     }
 }
 
@@ -252,11 +284,13 @@ void MMainFrame::ProcessFoilCurrents()
     if(fFoil->GetLoadedStatus())
     {
         fFoil->ProcessFoilCurrents();
-        DrawFoilCurrents(); // re-draw to include processing results 
+        // re-draw to include processing results
+        DrawCurrentStdOverview();
+        DrawCurrentTimeOverview();
     }
 }
 
-void MMainFrame::DrawFoilCurrent(Int_t event, Int_t px, Int_t py, TObject * selected)
+void MMainFrame::ZoomFoil(Int_t event, Int_t px, Int_t py)
 {
     if(event!=11) return;
     if(!fFoil->GetLoadedStatus()) return;
@@ -266,27 +300,23 @@ void MMainFrame::DrawFoilCurrent(Int_t event, Int_t px, Int_t py, TObject * sele
     std::cout << "channel id = " << foil_id << std::endl;
 
     MDialog * mdia = new MDialog(gClient->GetRoot(),fMain, 600, 600);
-    mdia->DrawFoilCurrent(foil_id, fFoil);
+    switch(fIPlot)
+    {
+        case 0: std::cout << "Drawing on tab " << fIPlot << std::endl; mdia->DrawCurrentStd(foil_id, fFoil); break;
+        case 1: std::cout << "Drawing on tab " << fIPlot << std::endl; mdia->DrawCurrentTime(foil_id, fFoil); break;
+        case 2: std::cout << "Drawing on tab " << fIPlot << std::endl; mdia->DrawCurrentCorr(foil_id, fFoil); break;
+    }
 }
 
 
 void MMainFrame::DrawFoilCurrent(Int_t foil_id)
 {
-    fCanv = fEcanvasAll->GetCanvas();
+    fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->Clear();
-
-    fFoil->DrawHChannel(foil_id, "hist", fCanv);
-    fFoil->DrawHLimit(foil_id);
-
     fCanv->SetLogy(0);
     gStyle->SetOptStat(0);
 
-    if(fFoil->GetProcessedStatus())
-    {
-        fFoil->DrawSatCurrent(foil_id);
-        fFoil->DrawSparks(foil_id,"hist same");
-        fFoil->DrawMeasurementRange(foil_id);
-    }
+    fFoil->DrawCurrentTimeAll(foil_id, fCanv);
 }
 
 void MMainFrame::Save()
@@ -294,25 +324,25 @@ void MMainFrame::Save()
     gROOT->SetBatch(kTRUE);
     
     // draw current overview
-    DrawFoilCurrents();
+    DrawCurrentTimeOverview();
     fCanv->Print(Form("Report%s.pdf[",fFoil->GetName().Data()), "pdf");
     fCanv->Print(Form("Report%s.pdf",fFoil->GetName().Data()));
     
     // draw std.dev overview
-    DrawStdDevs();
+    DrawCurrentStdOverview();
     fCanv->Print(Form("Report%s.pdf",fFoil->GetName().Data()));
     
     // draw each current per channel
     for(Int_t ich = 0; ich<fFoil->GetNC(); ++ich)
     {
         //ClickOnPad(ich, px, py); // artificial click on each pad, get px, py from that
-        DrawFoilCurrent(ich);
+        // DrawFoilCurrent(ich);
         fCanv->Print(Form("Report%s.pdf",fFoil->GetName().Data()));
     }
     fCanv->Print(Form("Report%s.pdf]",fFoil->GetName().Data()));
     
     gROOT->SetBatch(kFALSE);
-    DrawFoilCurrents();
+    DrawCurrentStdOverview();
 }
 
 void MMainFrame::DoExit()
@@ -357,33 +387,91 @@ void MDialog::FoilInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
     fStatusBarLocal->SetText(text,2);
 }
 
-void MDialog::DrawFoilCurrent(Int_t foil_id, MFoil * foil)
+void MDialog::DrawCurrentStd(Int_t foil_id, MFoil * foil)
 {
     // Set a name to the main frame
-    fMain->SetWindowName(Form("Channel %d",foil_id+1));
+    fMain->SetWindowName(Form("Channel %d",foil_id));
     
     fCanv = fECanvasCh->GetCanvas();
     //fCanv = fEcanvasCh[foil_id]->GetCanvas();
     fCanv->Clear();
-    foil->DrawHChannel(foil_id, "hist", fCanv);
-    foil->DrawHLimit(foil_id);
-
     fCanv->SetLogy(0);
     gStyle->SetOptStat(0);
+
+    foil->DrawCurrentStd(foil_id, fCanv);
+    foil->DrawHLimitStd(foil_id);
+
+    if(foil->GetProcessedStatus())
+    {
+        //foil->DrawSatCurrent(ich);
+
+        TLegend * tinfo = new TLegend(0.5, 0.5, 0.98, 0.8, "", "brNDC");
+        tinfo->SetFillStyle(0); tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
+        tinfo->AddEntry((TObject*)0,foil->GetInfoSatCurrent(foil_id), "");
+        tinfo->Draw();
+    }
+
+    fCanv->Modified();
+    fCanv->Update();
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MDialog",this,
+                   "FoilInfo(Int_t,Int_t,Int_t,TObject*)");
+}
+
+void MDialog::DrawCurrentTime(Int_t foil_id, MFoil * foil)
+{
+    // Set a name to the main frame
+    fMain->SetWindowName(Form("Channel %d",foil_id));
+
+    fCanv = fECanvasCh->GetCanvas();
+    //fCanv = fEcanvasCh[foil_id]->GetCanvas();
+    fCanv->Clear();
+    fCanv->SetLogy(0);
+    gStyle->SetOptStat(0);
+
+    foil->DrawCurrentTime(foil_id, fCanv);
+    foil->DrawHLimitTime(foil_id);
 
     if(foil->GetProcessedStatus())
     {
         foil->DrawSatCurrent(foil_id);
-        foil->DrawSparks(foil_id,"hist same");
-        foil->DrawMeasurementRange(foil_id);
 
         TLegend * tinfo = new TLegend(0.5, 0.5, 0.98, 0.8, "", "brNDC");
         tinfo->SetFillStyle(0); tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
-        tinfo->AddEntry((TObject*)0,"Stat", "");
         tinfo->AddEntry((TObject*)0,foil->GetInfoSatCurrent(foil_id), "");
-        //tinfo->AddEntry((TObject*)0,foil->GetInfoNumSparks(foil_id),  "");
         tinfo->Draw();
     }
+
+    fCanv->Modified();
+    fCanv->Update();
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MDialog",this,
+                   "FoilInfo(Int_t,Int_t,Int_t,TObject*)");
+}
+
+void MDialog::DrawCurrentCorr(Int_t foil_id, MFoil * foil)
+{
+    // Set a name to the main frame
+    fMain->SetWindowName(Form("Channel %d",foil_id));
+
+    fCanv = fECanvasCh->GetCanvas();
+    //fCanv = fEcanvasCh[foil_id]->GetCanvas();
+    fCanv->Clear();
+    fCanv->SetLogy(0);
+    gStyle->SetOptStat(0);
+
+    foil->DrawCurrentCorr(foil_id, fCanv);
+
+    if(foil->GetProcessedStatus())
+    {
+        //foil->DrawSatCurrent(ich);
+
+        TLegend * tinfo = new TLegend(0.5, 0.5, 0.98, 0.8, "", "brNDC");
+        tinfo->SetFillStyle(0); tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
+        tinfo->AddEntry((TObject*)0,foil->GetInfoSatCurrent(foil_id), "");
+        tinfo->Draw();
+    }
+
+    fCanv->Modified();
+    fCanv->Update();
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MDialog",this,
                    "FoilInfo(Int_t,Int_t,Int_t,TObject*)");
 }

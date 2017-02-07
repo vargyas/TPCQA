@@ -157,6 +157,7 @@ class MFoil
 RQ_OBJECT("MFoil")
 
 private: 
+    TTree * fInTree;                    ///< Tree directly read from inputfile, contains all information from the measurement
     Int_t fType;                        ///< Type of the foil: 0=IROC, 1=OROC1, 2=OROC2, 3=OROC3, 4=else
     Int_t fNumChannels;                 ///< Number of channels: 18 for IROC, 24 for OROC
     TString fName;                      ///< Name of the foil 
@@ -166,10 +167,15 @@ private:
     Bool_t fFlagIsLoaded;               ///< True if is loaded already, false if it is the first load of the datafile 
     std::vector<Int_t> fFlagQuality;    ///< Quality of the foil, as determined by process for each channel. Possible values: 0=bad (red), 1=good (green), 2=problematic (orange)
     TString fQualityText;               ///< Quality of the foil described by the operator
-    TH1D * fHLimit;                     ///< Histogram holding the leakage current limit (0.5nA now)
+    TH1D * fhLimitTime;                 ///< Histogram holding the leakage current limit (0.5nA in most cases)
+    TH1D * fhLimitStd;                  ///< Dummy histogram showing the 1sigma limit on the standard deviation plot
     Double_t fMeasurementStart;         ///< Start of measurement, after ramping is finished, determined by DetectMeasurementStart()
     Double_t fMeasurementEnd;           ///< End of measurement, determined by DetectMeasurementStop()
-    
+    Double_t fLimit;                    ///< Acceptance leakage current limit in nA
+    TList fhCurrentTime;                ///< List of time-dependent leakage current graphs
+    TList fhCurrentStd;                 ///< List of leakage current distribution histograms
+    std::vector<Double_t> fSatCurrent;  ///< Saturation current in nA
+
     void SetFileName(const TString infilename);
     
     void SaveFoil();                    ///< Saves obtained foil information and quality to either a pdf or a database
@@ -177,14 +183,6 @@ private:
 public:
     MFoil();                            ///< Default constructor
     virtual ~MFoil();                   ///< Default destructor
-
-    std::vector<Double_t> fSatCurrent;  ///< Saturation current, as determined by Process()
-    std::vector<Int_t> fnSparks;        ///< Number of sparks for each channel
-    TList fhSparks;                     ///< X positions of each spark [channel index]
-    TList fhChannel;                    ///< Histograms of the leakage current
-    TList fhChannelPos;                 ///< Histograms of the leakage current with absolute values (to work with TSpectrum, which only recongises positive peaks)
-    TList fhChStdDev;                   ///< Standard deviation histograms for each channels
-    std::vector<std::vector<Double_t>> fCurrents;
 
     void LoadFoilCurrents(const TString infilename);    ///< Loads foil information from file selected by mouse and displays it
     void ProcessFoilCurrents();         ///< Processes the measured foil current(s) and evaulates the foil
@@ -194,22 +192,27 @@ public:
     Bool_t GetProcessedStatus() const;
     Bool_t GetLoadedStatus() const;
     TString GetInfoSatCurrent(Int_t id) const;
-    TString GetInfoNumSparks(Int_t id) const;
     TString GetInFileName() const;
     TString GetName() const;
 
-    void CreateHLimit(); ///<
-    void DrawHLimit(Int_t ich);
-    void DrawHChannel(Int_t id, TString opt, TCanvas * c);
-    void DrawStdDev(Int_t ich, TString opt, TCanvas * c);
+    void CreateHLimitTime(); ///<
+    void CreateHLimitStd(Int_t ich, Double_t ymax); ///<
+    void DrawHLimitTime(Int_t ich);
+    void DrawHLimitStd(Int_t ich);
+    void DrawCurrentTime(Int_t id, TCanvas * c);
+    void DrawCurrentStd(Int_t ich, TCanvas * c);
+    void DrawCurrentCorr(Int_t ich, TCanvas * c);
+
     void DrawSatCurrent(Int_t ich);
     void DrawMeasurementRange(Int_t ich);
     void DrawSparks(Int_t ich, TString opt);
+    void DrawCurrentTimeAll(Int_t ich, TCanvas * c);
 
     Double_t DetectMeasurementStart();
     Double_t DetectMeasurementStop();
     void DetectSparks(Double_t xmax);
     Double_t EstimateSatCurrent(Int_t id);
+    Double_t GetSaturationCurrent(Int_t id);
     
     Int_t GetProcessedColor(Int_t ich) const ;
     Double_t GetLastSparkPosition(Int_t ich);
