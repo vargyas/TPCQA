@@ -334,7 +334,7 @@ void MMainFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
 
 void MMainFrame::LoadCurrentFile()
 {   
-    static  TString dir("./");
+	static  TString dir("../data");
     TGFileInfo fi;
     fi.fFileTypes = filetypes;
     fi.fIniDir    = StrDup(dir);
