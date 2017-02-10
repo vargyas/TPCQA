@@ -409,37 +409,31 @@ void MMainFrame::Save()
     gROOT->SetBatch(kTRUE);
 
     const Int_t N = fFoil->GetNC();
-    const TString fname = Form("Report%s.pdf",fFoil->GetName().Data());
+    int iplot=0;
 
-    // draw current overview
-    //DrawCurrentTimeOverview();
+    // save current overview
     fCanv = fEcanvasAll[0]->GetCanvas();
+    fCanv->Print(Form("Report%.2d.png",iplot++));
 
-    fCanv->Print(fname+"[", "pdf");
-    fCanv->Print(fname);
     for(Int_t ich = 0; ich<N; ++ich)
     {
-        ZoomFoilPrint(ich, 0, fname);
+        ZoomFoilPrint(ich, 0, Form("Report%.2d.png",iplot++));
     }
-    // draw std.dev overview
-    //DrawCurrentStdOverview();
+    // save std.dev overview
     fCanv = fEcanvasAll[1]->GetCanvas();
-    fCanv->Print(fname);
+    fCanv->Print(Form("Report%.2d.png",iplot++));
     for(Int_t ich = 0; ich<N; ++ich)
     {
-        ZoomFoilPrint(ich, 1, fname);
+        ZoomFoilPrint(ich, 1, Form("Report%.2d.png",iplot++));
     }
-    // draw corr overview
+    // save corr overview
     fCanv = fEcanvasAll[2]->GetCanvas();
-    fCanv->Print(fname);
-    fCanv->Print(fname+"]");
-    
+    fCanv->Print(Form("Report%.2d.png",iplot++));
+
     gROOT->SetBatch(kFALSE);
 
-    //DrawCurrentStdOverview();
-    //DrawCurrentTimeOverview();
-
-    //DrawCurrentCorrOverview();
+    gROOT->ProcessLine(".! convert Report*.png REPORT.pdf");
+    gROOT->ProcessLine(".! rm Report*.png");
 }
 
 void MMainFrame::DoExit()
