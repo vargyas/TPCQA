@@ -100,15 +100,27 @@ void MFoil::LoadFoilCurrents(const TString filename)
 
     //CreateHLimitTime();
 
-    std::vector<Double_t*> currents;
+	//std::vector<Double_t*> currents;
+
+	fInTree->Draw(Form("time:I_%.2d",0),"","goff");
+	Double_t * times    = fInTree->GetVal(0);
+	Double_t * current0 = fInTree->GetVal(1);
 
     for (Int_t ich = 0; ich<fNumChannels; ich++)
     {
         // read variables (SetBranchAddress doesn't work)
-        fInTree->Draw(Form("time:I_%.2d",ich),"","goff");
-        Double_t * times   = fInTree->GetVal(0);
-        Double_t * current = fInTree->GetVal(1);
-        currents.push_back(current);
+		fInTree->Draw(Form("time:I_%.2d",ich),"","goff");
+		//Double_t * times   = new Double_t[ndata];
+		//times = fInTree->GetVal(0);
+		//Double_t * current = new Double_t[ndata];
+		//current = fInTree->GetVal(1);
+		//Double_t* times = fInTree->GetVal(0);
+		Double_t * current = fInTree->GetVal(1);
+
+		//fInTree->SetBranchAddress("time", &times);
+		//if(fInTree->GetListOfBranches()->FindObject(Form("I_%.2d",ich)) );
+		//	fInTree->SetBranchAddress(Form("I_%.2d",ich), &current);
+		//currents.push_back(current);
 
         Double_t width = (times[2]-times[1])/2.;
         fMeasurementStart = times[0]-width;
@@ -116,11 +128,13 @@ void MFoil::LoadFoilCurrents(const TString filename)
 
         fhCurrentStd.Add( new TH1D(Form("hCurrentStd_CH%d", ich), Form("CH %d", ich), 1000, -fLimit, fLimit) );
 
-        fhCurrentCorr.Add( new TGraph(ndata, currents.at(0), currents.at(ich)) );
+
+		fhCurrentTime.Add( new TGraph(ndata, times, current) );
+		((TGraph*)fhCurrentTime.At(ich))->SetTitle("");
+
+		fhCurrentCorr.Add( new TGraph(ndata, current0, current ) );
         ((TGraph*)fhCurrentCorr.At(ich))->SetTitle("");
 
-        fhCurrentTime.Add( new TGraph(ndata, times, current) );
-        ((TGraph*)fhCurrentTime.At(ich))->SetTitle("");
 
         for( Int_t idata=1; idata<=ndata; idata++)
             ((TH1D*)fhCurrentStd.At(ich))->Fill(current[idata]);

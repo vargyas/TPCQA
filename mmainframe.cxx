@@ -54,7 +54,10 @@ void MMainFrame::CreateDividedPad()
 MMainFrame::MMainFrame(const TGWindow *p, UInt_t w, UInt_t h)
 {
 
-    std::cout << "MMainFrame\n";
+	std::cout << "Your system arch. is: " << gSystem->GetBuildArch() << std::endl;
+	//CpuInfo_t info;
+	//gSystem->GetCpuInfo(&info);
+	//std::cout << "\t your processor is: " << info << std::endl;
 
     fxmin = 0.1;
     fymin = 0.1;
@@ -389,40 +392,42 @@ void MMainFrame::ZoomFoilPrint(Int_t foil_id, Int_t itab, TString filename)
     if(!fFoil->GetLoadedStatus()) return;
     if(!fFoil->GetProcessedStatus()) return;
 
-    TCanvas c("ctemp","",580,580);
-    TPad pad("dialogpad","",0,0,1,1);
-    pad.SetLeftMargin(0.15); pad.SetRightMargin(0); pad.SetBottomMargin(0.15); pad.SetTopMargin(0);
-    pad.Draw();
-    pad.cd();
+	TCanvas * c = new TCanvas("ctemp","",580,580);
+	TPad * pad = new TPad("dialogpad","",0,0,1,1);
+	pad->SetLeftMargin(0.15); pad->SetRightMargin(0); pad->SetBottomMargin(0.15); pad->SetTopMargin(0);
+	pad->Draw();
+	pad->cd();
 
     switch(itab)
     {
-        case 0: fFoil->DrawCurrentStd(foil_id, &pad, true); break;
-        case 1: fFoil->DrawCurrentTime(foil_id, &pad, true); break;
-        case 2: fFoil->DrawCurrentCorr(foil_id, &pad, true); break;
+		case 0: fFoil->DrawCurrentStd(foil_id, pad, true); break;
+		case 1: fFoil->DrawCurrentTime(foil_id, pad, true); break;
+		case 2: fFoil->DrawCurrentCorr(foil_id, pad, true); break;
     }
-    c.Print(filename);
+	c->Print(filename);
+	delete c;
 }
 
 void MMainFrame::Save()
 {
     gROOT->SetBatch(kTRUE);
 
-    const Int_t N = fFoil->GetNC();
-    int iplot=0;
+	Int_t N = fFoil->GetNC();
+	Int_t iplot=0;
+	cout << "save channels "  << N << endl;
 
     // save current overview
     fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->Print(Form("Report%.2d.png",iplot++));
 
-    for(Int_t ich = 0; ich<N; ++ich)
+	for(Int_t ich = 0; ich<N; ich++)
     {
         ZoomFoilPrint(ich, 0, Form("Report%.2d.png",iplot++));
     }
     // save std.dev overview
     fCanv = fEcanvasAll[1]->GetCanvas();
     fCanv->Print(Form("Report%.2d.png",iplot++));
-    for(Int_t ich = 0; ich<N; ++ich)
+	for(Int_t ich = 0; ich<N; ich++)
     {
         ZoomFoilPrint(ich, 1, Form("Report%.2d.png",iplot++));
     }
@@ -432,8 +437,12 @@ void MMainFrame::Save()
 
     gROOT->SetBatch(kFALSE);
 
+	// merge to report and clean up intermediate files
     gROOT->ProcessLine(".! convert Report*.png REPORT.pdf");
-    gROOT->ProcessLine(".! rm Report*.png");
+	for(Int_t i=0; i<iplot; i++)
+		gROOT->ProcessLine( Form("remove( \"Report%.2d.png\");",i) );
+
+
 }
 
 void MMainFrame::DoExit()
