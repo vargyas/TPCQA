@@ -3,6 +3,8 @@
 #ifndef MFOIL_H
 #define MFOIL_H
 
+
+
 #include <algorithm>
 #include<iostream>
 #include<string>
@@ -10,6 +12,7 @@
 #include<sstream>
 #include<ctime>
 #include<vector>
+
 
 #include "TF1.h"
 #include "TH1D.h"
@@ -28,6 +31,8 @@
 #include "TPad.h"
 #include "TLegend.h"
 #include "TLine.h"
+#include "TPaveLabel.h"
+
 
 #include "TROOT.h"
 #include "TStyle.h"
@@ -72,6 +77,7 @@
 #include <TKey.h>
 #include <TGDockableFrame.h>
 #include <TGFontDialog.h>
+#include <TFrame.h>
 
 
 const char *filetypes[] = { "All files",     "*",
@@ -174,6 +180,8 @@ private:
     Double_t fLimit;                    ///< Acceptance leakage current limit in nA
     TList fhCurrentTime;                ///< List of time-dependent leakage current graphs
     TList fhCurrentStd;                 ///< List of leakage current distribution histograms
+    TList fhCurrentCorr;                ///< List of leakage current "0" vs. leakage current "i" histograms, first element is autocorrelation
+
     std::vector<Double_t> fSatCurrent;  ///< Saturation current in nA
 
     void SetFileName(const TString infilename);
@@ -192,6 +200,7 @@ public:
     Bool_t GetProcessedStatus() const;
     Bool_t GetLoadedStatus() const;
     TString GetInfoSatCurrent(Int_t id) const;
+    TString GetInfoLimitCurrent() const;
     TString GetInFileName() const;
     TString GetName() const;
 
@@ -199,14 +208,15 @@ public:
     void CreateHLimitStd(Int_t ich, Double_t ymax); ///<
     void DrawHLimitTime(Int_t ich);
     void DrawHLimitStd(Int_t ich);
-    void DrawCurrentTime(Int_t id, TCanvas * c);
-    void DrawCurrentStd(Int_t ich, TCanvas * c);
-    void DrawCurrentCorr(Int_t ich, TCanvas * c);
+    void DrawCurrentTime(Int_t id, TPad * p, Bool_t axes);
+    void DrawCurrentStd(Int_t ich, TPad * p, Bool_t axes);
+    void DrawCurrentCorr(Int_t ich, TPad * p, Bool_t axes);
 
-    void DrawSatCurrent(Int_t ich);
+    void DrawSatCurrentTime(Int_t ich);
+    void DrawSatCurrentStd(Int_t ich);
+    void DrawCorrCurrent();
     void DrawMeasurementRange(Int_t ich);
     void DrawSparks(Int_t ich, TString opt);
-    void DrawCurrentTimeAll(Int_t ich, TCanvas * c);
 
     Double_t DetectMeasurementStart();
     Double_t DetectMeasurementStop();
@@ -219,6 +229,10 @@ public:
 
     void SetPadMargins(TCanvas * c);
     void SetAxisStyle(TH1D * h);
+    void SetAxisStyle(TGraph * h);
+
+    void DrawLimitTime();
+    void DrawLimitStd(Int_t ich);
     
     //ClassDef(MFoil, 1);
 };

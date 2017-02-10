@@ -3,7 +3,6 @@
 #ifndef MFOIL_CXX
 #define MFOIL_CXX
 
-
 //----------------------------------------------------------------------------------
 MFoil::MFoil() :
     fInFileName(0),
@@ -22,13 +21,13 @@ MFoil::MFoil() :
     fhCurrentStd(0),
     fSatCurrent(0),
     fhLimitTime(0),
-    fhLimitStd(0)
+    fhLimitStd(0),
+    fhCurrentCorr(0)
 {
     // default constructor
     fhCurrentTime.SetOwner(kTRUE);
     fhCurrentStd.SetOwner(kTRUE);
-
-    //CreateHLimit();
+    fhCurrentCorr.SetOwner(kTRUE);
 }
 //----------------------------------------------------------------------------------
 MFoil::~MFoil() 
@@ -88,6 +87,7 @@ void MFoil::LoadFoilCurrents(const TString filename)
         std::cout << "clearing histograms...\n";
         fhCurrentStd.Clear();
         fhCurrentTime.Clear();
+        fhCurrentCorr.Clear();
         delete fInTree;
     }
 
@@ -98,39 +98,40 @@ void MFoil::LoadFoilCurrents(const TString filename)
 
     const Int_t ndata = fInTree->GetEntries();
 
-    CreateHLimitTime();
+    //CreateHLimitTime();
+
+    std::vector<Double_t*> currents;
 
     for (Int_t ich = 0; ich<fNumChannels; ich++)
     {
         // read variables (SetBranchAddress doesn't work)
         fInTree->Draw(Form("time:I_%.2d",ich),"","goff");
         Double_t * times   = fInTree->GetVal(0);
-        // measurent is not properly zero-padded, so setting it manually
-        // Double_t time_zero = times[1];
-        // Double_t * time_shift = new Double_t[ndata-1];
-        // for(Int_t i=1; i<ndata; i++) times[i] -= time_zero;
-
         Double_t * current = fInTree->GetVal(1);
+        currents.push_back(current);
 
         Double_t width = (times[2]-times[1])/2.;
         fMeasurementStart = times[0]-width;
         fMeasurementEnd   = times[ndata-1]+width;
 
-        fhCurrentStd.Add( new TH1D(Form("hCurrentStd_CH%d", ich), Form("CH %d", ich), 1000, fLimit*(-1.5), fLimit*1.5) );
+        fhCurrentStd.Add( new TH1D(Form("hCurrentStd_CH%d", ich), Form("CH %d", ich), 1000, -fLimit, fLimit) );
+
+        fhCurrentCorr.Add( new TGraph(ndata, currents.at(0), currents.at(ich)) );
+        ((TGraph*)fhCurrentCorr.At(ich))->SetTitle("");
+
         fhCurrentTime.Add( new TGraph(ndata, times, current) );
         ((TGraph*)fhCurrentTime.At(ich))->SetTitle("");
 
         for( Int_t idata=1; idata<=ndata; idata++)
             ((TH1D*)fhCurrentStd.At(ich))->Fill(current[idata]);
 
-
-        ((TH1D*)fhCurrentStd.At(ich))->SetXTitle(Form("I_%.2d [nA]",ich));
-        ((TH1D*)fhCurrentStd.At(ich))->SetYTitle("occurence");
+        ((TH1D*)fhCurrentStd.At(ich))->SetXTitle("");
+        ((TH1D*)fhCurrentStd.At(ich))->SetYTitle("");
         SetAxisStyle(((TH1D*)fhCurrentStd.At(ich)));
 
 
-        Double_t ymax = ((TH1D*)fhCurrentStd.At(ich))->GetMaximum();
-        CreateHLimitStd(ich, ymax);
+        //Double_t ymax = ((TH1D*)fhCurrentStd.At(ich))->GetMaximum();
+        //CreateHLimitStd(ich, ymax);
     }
 
     fFlagIsLoaded = kTRUE;
@@ -184,6 +185,10 @@ Bool_t MFoil::GetLoadedStatus() const { return fFlagIsLoaded; }
 TString MFoil::GetInfoSatCurrent(Int_t foil_id) const
 {
     return Form("I_{sat} = %.3f nA\n",fSatCurrent[foil_id]);
+}//----------------------------------------------------------------------------------
+TString MFoil::GetInfoLimitCurrent() const
+{
+    return Form("I_{limit} = %.3f nA\n",fLimit);
 }
 //----------------------------------------------------------------------------------
 
@@ -254,13 +259,33 @@ void MFoil::DrawHLimitStd(Int_t ich)
 }
 
 //----------------------------------------------------------------------------------
-void  MFoil::DrawSatCurrent(Int_t ich)
+void  MFoil::DrawSatCurrentTime(Int_t ich)
 {
     TLine * lcurrent = new TLine(fMeasurementStart, fSatCurrent.at(ich),fMeasurementEnd,  fSatCurrent.at(ich));
     lcurrent->SetLineColor(kBlack);
     lcurrent->SetLineWidth(3);
     lcurrent->Draw();
 }
+//----------------------------------------------------------------------------------
+void  MFoil::DrawSatCurrentStd(Int_t ich)
+{
+    TLine * lcurrent = new TLine(fSatCurrent.at(ich),0, fSatCurrent.at(ich), ((TH1D*)fhCurrentStd.At(ich))->GetMaximum());
+    lcurrent->SetLineColor(kBlack);
+    lcurrent->SetLineWidth(1);
+    lcurrent->SetLineStyle(2);
+    lcurrent->Draw();
+}
+//----------------------------------------------------------------------------------
+void  MFoil::DrawCorrCurrent()
+{
+    if(!GetLoadedStatus()) return;
+    //Double_t xmin = ((TGraph*)fhCurrentCorr.At(0))->GetXaxis()->GetXmin();
+    //Double_t xmax = ((TGraph*)fhCurrentCorr.At(0))->GetXaxis()->GetXmax();
+
+    TLine * lcorr = new TLine(-fLimit/2., -fLimit/2., fLimit/2., fLimit/2.);
+    lcorr->Draw();
+}
+
 //----------------------------------------------------------------------------------
 void  MFoil::DrawMeasurementRange(Int_t ich)
 {
@@ -273,40 +298,185 @@ void  MFoil::DrawMeasurementRange(Int_t ich)
     lrangeHigh->Draw();
 }
 //----------------------------------------------------------------------------------
-void MFoil::DrawCurrentTime(Int_t ich, TCanvas * c)
+void MFoil::DrawLimitStd(Int_t ich)
 {
-    //c->Clear();
+    TLine * low  = new TLine(-fLimit, 0, -fLimit, ((TH1D*)fhCurrentStd.At(ich))->GetMaximum() );
+    TLine * high = new TLine(fLimit, 0, fLimit, ((TH1D*)fhCurrentStd.At(ich))->GetMaximum() );
+    low->Draw();
+    high->Draw();
+}
+
+//----------------------------------------------------------------------------------
+
+void MFoil::DrawLimitTime()
+{
+    TLine * low  = new TLine(fMeasurementStart, -fLimit, fMeasurementEnd, -fLimit );
+    TLine * high = new TLine(fMeasurementStart, fLimit, fMeasurementEnd, fLimit );
+    low->SetLineWidth(1);
+    low->SetLineStyle(2);
+    high->SetLineWidth(1);
+    high->SetLineStyle(2);
+    low->Draw();
+    high->Draw();
+}
+//----------------------------------------------------------------------------------
+
+void MFoil::DrawCurrentTime(Int_t ich, TPad * p, Bool_t drawaxes)
+{
+    gStyle->SetOptStat(0);
+
     TGraph * g = ((TGraph*)fhCurrentTime.At(ich));
-
-    //SetPadMargins(c);
-    //SetAxisStyle(h); // TODO: implement for TGraph as well
-
-    g->GetXaxis()->SetTitle("time [sec]");
-    g->GetYaxis()->SetTitle("leakage current [nA]");
-    g->SetLineColor(kBlue);
+    g->SetLineColor( GetProcessedColor(ich) );
+    if(drawaxes)
+    {
+        SetAxisStyle(g);
+        g->GetXaxis()->CenterTitle();
+        g->GetYaxis()->CenterTitle();
+        g->GetXaxis()->SetTitle("time [sec]");
+        g->GetYaxis()->SetTitle("leakage current [nA]");
+    }
 
     g->Draw("AL");
     g->GetYaxis()->SetRangeUser(-2.*fLimit,2.*fLimit);
-    c->Update();
+
+    if(GetProcessedStatus())
+    {
+        DrawLimitTime();
+
+        DrawSatCurrentTime(ich);
+
+        if(drawaxes)
+        {
+            TLegend * tinfo = new TLegend(0.2, 0.2, 0.8, 0.3, "", "brNDC");
+            tinfo->SetFillStyle(0); tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
+            tinfo->AddEntry((TObject*)0,GetInfoSatCurrent(ich), "");
+            tinfo->AddEntry((TObject*)0,GetInfoLimitCurrent(), "");
+            tinfo->Draw();
+
+            TLegend * tch = new TLegend(0.2, 0.75, 0.8, 0.98, "", "brNDC");
+            tch->SetFillStyle(0); tch->SetBorderSize(0); tch->SetTextSize(0.1);
+            tch->AddEntry((TObject*)0,Form("CH %d",ich), "");
+            tch->Draw();
+        }
+        else
+        {
+            TLegend * tch = new TLegend(0.2, 0.75, 0.8, 0.98, "", "brNDC");
+            tch->SetFillStyle(0); tch->SetBorderSize(0); tch->SetTextSize(0.15);
+            tch->AddEntry((TObject*)0,Form("CH %d",ich), "");
+            tch->Draw();
+        }
+    }
+
+    p->Modified();
+    p->Update();
 }
+
 //----------------------------------------------------------------------------------
-void MFoil::DrawCurrentStd(Int_t ich, TCanvas * c)
+void MFoil::DrawCurrentStd(Int_t ich, TPad * p, Bool_t drawaxes)
 {
-    //c->Clear();
+    gStyle->SetOptStat(0);
+    gStyle->SetOptTitle(0);
 
     TH1D * h = ((TH1D*)fhCurrentStd.At(ich));
+    h->SetLineColor( GetProcessedColor(ich) );
+    h->SetMarkerColor( GetProcessedColor(ich) );
 
-    //SetPadMargins(c);
+    if(drawaxes)
+    {
+        SetAxisStyle(h);
+        h->GetXaxis()->CenterTitle();
+        h->GetYaxis()->CenterTitle();
+        h->GetXaxis()->SetTitle("leakage current [nA]");
+        h->GetYaxis()->SetTitle("occurence");
+    }
 
     h->Draw("HIST");
-    c->Update();
+
+    if(GetProcessedStatus())
+    {
+        DrawLimitStd(ich);
+
+        DrawSatCurrentStd(ich);
+
+        if(drawaxes)
+        {
+            TLegend * tch = new TLegend(0.2, 0.7, 0.5, 0.8);
+            //tch->SetFillStyle(3001); tch->SetFillColor(kWhite);
+            tch->SetBorderSize(0); tch->SetTextSize(0.1);
+            tch->AddEntry((TObject*)0,Form("CH %d",ich), "");
+            tch->Draw();
+
+            TLegend * tinfo = new TLegend(0.2, 0.3, 0.5, 0.4);
+            //tinfo->SetFillStyle(3001); tinfo->SetFillColor(kWhite);
+            tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
+            tinfo->AddEntry((TObject*)0,GetInfoSatCurrent(ich), "");
+            tinfo->AddEntry((TObject*)0,GetInfoLimitCurrent(), "");
+            tinfo->Draw();
+        }
+        else
+        {
+            TLegend * tch = new TLegend(0.1, 0.7, 0.2, 0.8);
+            //tch->SetFillStyle(3001); tch->SetFillColor(kWhite);
+            tch->SetBorderSize(0); tch->SetTextSize(0.15);
+            tch->AddEntry((TObject*)0,Form("CH %d",ich), "");
+            tch->Draw();
+        }
+    }
+
+    p->Modified();
+    p->Update();
 }
 //----------------------------------------------------------------------------------
-void MFoil::DrawCurrentCorr(Int_t ich, TCanvas * c)
+void MFoil::DrawCurrentCorr(Int_t ich, TPad * p, Bool_t drawaxes)
 {
-    //c->Clear();
+    gStyle->SetOptStat(0);
 
-    std::cout << "DrawCurrentCorr() is not yet implemented\n";
+    TGraph * g = ((TGraph*)fhCurrentCorr.At(ich));
+    g->SetLineColor( GetProcessedColor(ich) );
+
+    if(drawaxes)
+    {
+        SetAxisStyle(g);
+        g->GetXaxis()->CenterTitle();
+        g->GetYaxis()->CenterTitle();
+        g->GetXaxis()->SetTitle("I_{0} [nA]");
+        g->GetYaxis()->SetTitle(Form("I_{%d} [nA]",ich));
+        g->SetMarkerStyle(24);
+        g->SetMarkerSize(0.1);
+    }
+
+    g->Draw("AP");
+    g->GetXaxis()->SetRangeUser(-fLimit/2.,fLimit/2.);
+    g->GetYaxis()->SetRangeUser(-fLimit/2.,fLimit/2.);
+
+    if(GetProcessedStatus())
+    {
+        DrawCorrCurrent();
+
+        if(drawaxes)
+        {
+            //TLegend * tinfo = new TLegend(0.2, 0.2, 0.8, 0.3, "", "brNDC");
+            //tinfo->SetFillStyle(0); tinfo->SetBorderSize(0); tinfo->SetTextSize(0.05);
+            //tinfo->AddEntry((TObject*)0,GetInfoSatCurrent(ich), "");
+            //tinfo->AddEntry((TObject*)0,GetInfoLimitCurrent(), "");
+            //tinfo->Draw();
+
+            TLegend * tch = new TLegend(0.2, 0.75, 0.8, 0.98, "", "brNDC");
+            tch->SetFillStyle(0); tch->SetBorderSize(0); tch->SetTextSize(0.1);
+            tch->AddEntry((TObject*)0,Form("CH %d",ich), "");
+            tch->Draw();
+        }
+        else
+        {
+            TLegend * tch = new TLegend(0.2, 0.75, 0.8, 0.98, "", "brNDC");
+            tch->SetFillStyle(0); tch->SetBorderSize(0); tch->SetTextSize(0.15);
+            tch->AddEntry((TObject*)0,Form("CH %d",ich), "");
+            tch->Draw();
+        }
+    }
+
+    p->Modified();
+    p->Update();
 }
 
 //----------------------------------------------------------------------------------
@@ -320,7 +490,7 @@ void MFoil::SetPadMargins(TCanvas * c)
     p->Update();
 }
 //----------------------------------------------------------------------------------
-void MFoil::SetAxisStyle(TH1D * h)
+void MFoil::SetAxisStyle(TGraph * h)
 {
     TAxis * ax = h->GetXaxis();
     TAxis * ay = h->GetYaxis();
@@ -333,18 +503,19 @@ void MFoil::SetAxisStyle(TH1D * h)
     ay->SetTitleSize(0.06);
 }
 //----------------------------------------------------------------------------------
-void MFoil::DrawCurrentTimeAll(Int_t ich, TCanvas * c)
+void MFoil::SetAxisStyle(TH1D * h)
 {
-    //c->Clear();
+    TAxis * ax = h->GetXaxis();
+    TAxis * ay = h->GetYaxis();
 
-    DrawCurrentTime(ich, c);
-    DrawHLimitTime(ich);
-
-    if(GetProcessedStatus())
-    {
-        DrawSatCurrent(ich);
-    }
+    ax->SetTitleOffset(1.1);
+    ax->SetLabelOffset(0.01);
+    ay->SetTitleOffset(1.1);
+    ay->SetLabelOffset(0.01);
+    ax->SetTitleSize(0.06);
+    ay->SetTitleSize(0.06);
 }
+
 
 
 #endif
