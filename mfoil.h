@@ -38,7 +38,9 @@
 #include "TStyle.h"
 #include "TEnv.h"
 
-#include "RQ_Object.h"
+//#include "RQ_OBJECT.h"		// use this for linux
+#include "RQ_Object.h"			// use this for mac and win
+
 #include "TQObject.h"
 #include "TApplication.h"
 #include "TGFileDialog.h"
