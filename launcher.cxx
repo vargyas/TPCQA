@@ -1,26 +1,24 @@
-//#include "procFoilLinkDef.h"
-#include "mmainframe.cxx"
+#include "mlauncher.cxx"
 
 /// Main window
 /** This is the main window. */
 
-void processFoil()
+void launcher()
 {
-	new MMainFrame(gClient->GetRoot(), 900, 700);
+    new MLauncher(gClient->GetRoot(), 900, 700);
 }
 
 //#ifdef STANDALONE
 int main(int argc, char **argv)
 {
-   TApplication theApp("processFoil", &argc, argv);
+   TApplication theApp("launcher", &argc, argv);
 
    if (gROOT->IsBatch()) 
    {
       fprintf(stderr, "%s: cannot run in batch mode\n", argv[0]);  
       return 1;
    }
-   processFoil();
-   //new MMainFrame(gClient->GetRoot(), 900, 700);
+   launcher();
 
    theApp.Run();
    return 0;
