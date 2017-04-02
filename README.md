@@ -1,4 +1,4 @@
-# TPCgui
+# TPCQA
 ## Software aid for the ALICE TPC Upgrade's advanced QA
 ### GUI for leakage current measurement, high-definition optical scan and gain scan
 
@@ -26,3 +26,6 @@ There are 5 buttons on the bottom:
   * Save: saves 2D and 1D data into text files
   * Print: print all canvases into a single pdf file
   * Help: save as above
+
+#### Gain scan
+Not implemented yet.
