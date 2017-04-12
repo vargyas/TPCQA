@@ -111,6 +111,7 @@ data_array_outer = np.array( [(0,0,0,0,0,0)],
                         ('moment_1',np.float64), 
                         ('moment_2',np.float64)] )
 
+
 # Loop over the chunks
 print '========================='
 ifile = 0
@@ -119,7 +120,7 @@ if len(sys.argv) > 2:
     outname = sys.argv[2]
 
 for ifilename in glob.iglob('{}/*.h5'.format(datadir)):
-    print 'load file:', ifile,'/',len(glob.glob('./{}/*.h5'.format(datadir))), ':', ifilename
+    print 'load file:', ifile,'/',len(glob.glob('{}/*.h5'.format(datadir))), ':', ifilename
     # load HDF5 into a python dictionary
     data_dict = load_HDF5file_dict(ifilename)
     # convert that to named (structured) numpy array
@@ -140,7 +141,21 @@ print '\ncreate a tree from the array'
 treeInner = array2tree(data_array_inner, name='inner_tree')
 treeOuter = array2tree(data_array_outer, name='outer_tree')
 
-# merge the trees (takes some time)
+
+print '\ncalculate rim width'
+rim_tmp = list()
+# for i in range(treeInner.GetEntries()):
+for i in range(len(data_array_outer)):
+    rim=data_array_outer[i]['diameter']-data_array_inner[i]['diameter']
+    rim_tmp.append((data_array_outer[i]['x'], data_array_outer[i]['y'], rim))
+
+data_array_rim = np.array( rim_tmp,
+                    dtype=[('x',np.float64),
+                        ('y',np.float64),
+                        ('rim',np.float64)] )
+treeRim = array2tree(data_array_rim, name='rim_tree')
+
+# merge the trees (takes some time) so it is not used
 #tree = TTree.MergeTrees( tlist )
 
 print 'writing file to:', outname
@@ -149,6 +164,7 @@ outFile.cd()
 
 treeInner.Write()
 treeOuter.Write()
+treeRim.Write()
 
 outFile.Write()
 outFile.Close()
