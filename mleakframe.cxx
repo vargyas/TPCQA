@@ -6,8 +6,8 @@
 
 void MLeakFrame::AdjustPad(TPad * pad)
 {
-	pad->SetLeftMargin(0);pad->SetRightMargin(0);
-	pad->SetTopMargin(0);pad->SetBottomMargin(0);
+    pad->SetLeftMargin(0);pad->SetRightMargin(0);
+    pad->SetTopMargin(0);pad->SetBottomMargin(0);
     pad->Range(0,0,100,100);
 }
 
@@ -18,18 +18,18 @@ void MLeakFrame::AdjustPad(TPad * pad)
 
 void MLeakFrame::CreateDividedPad()
 {
-	std::cout << "CreateDividedPad()...\n";
+    std::cout << "CreateDividedPad()...\n";
 
-	Int_t ititle=0;
-	TString xlabel[] = {"Leakage current [nA]", "time [s]"};
-	TString ylabel[] = {"Occurence",			"Leakage current [nA]"};
-	TPaveLabel * xtitle[5];
-	TPaveLabel * ytitle[5];
+    Int_t ititle=0;
+    TString xlabel[] = {"Leakage current [nA]", "time [s]"};
+    TString ylabel[] = {"Occurence",            "Leakage current [nA]"};
+    TPaveLabel * xtitle[5];
+    TPaveLabel * ytitle[5];
 
 
-	for(Int_t itab=0; itab<5; itab++)
+    for(Int_t itab=0; itab<5; itab++)
     {
-		itab == 0 ? ititle=0 : ititle=1;
+        itab == 0 ? ititle=0 : ititle=1;
 
         fCanv = fEcanvasAll[itab]->GetCanvas();
         fCanv->cd();
@@ -43,19 +43,19 @@ void MLeakFrame::CreateDividedPad()
 
         // Add x/y title
 
-		xtitle[itab] = new TPaveLabel(0.0, 0.0, 100, 100, xlabel[ititle]);
-		xtitle[itab]->SetBorderSize(0); xtitle[itab]->SetFillColor(kWhite);
+        xtitle[itab] = new TPaveLabel(0.0, 0.0, 100, 100, xlabel[ititle]);
+        xtitle[itab]->SetBorderSize(0); xtitle[itab]->SetFillColor(kWhite);
         xtitle[itab]->SetTextSize(20./(fPad[0][itab]->GetBBox().fHeight));
         xtitle[itab]->SetTextFont(42);
 
-		ytitle[itab] = new TPaveLabel(0.0, 0.0, 100, 100, ylabel[ititle]);
+        ytitle[itab] = new TPaveLabel(0.0, 0.0, 100, 100, ylabel[ititle]);
         ytitle[itab]->SetBorderSize(0); ytitle[itab]->SetFillColor(kWhite);
         ytitle[itab]->SetTextSize(20./(fPad[1][itab]->GetBBox().fHeight));
         ytitle[itab]->SetTextAngle(90);
         ytitle[itab]->SetTextFont(42);
 
         // Divide data tab
-		Int_t type = fLeak->GetType();
+        Int_t type = fLeak->GetType();
         if(type==0 || type==4) fPad[2][itab]->Divide(3, 6, 0.0, 0.0); // IROC and for unidentified foil
         if(type>=1 && type<=3) fPad[2][itab]->Divide(4, 6, 0.0, 0.0); // OROC 1, 2, 3
 
@@ -66,7 +66,7 @@ void MLeakFrame::CreateDividedPad()
         fCanv->Modified();
         fCanv->Update();
     }
-	std::cout << "CreateDividedPad() done...\n";
+    std::cout << "CreateDividedPad() done...\n";
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -76,20 +76,20 @@ void MLeakFrame::CreateDividedPad()
 /// \param w
 /// \param h
 ///
-MLeakFrame::MLeakFrame(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h)
+MLeakFrame::MLeakFrame(Int_t location, const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h)
 {
     fxmin = 0.1;
     fymin = 0.1;
 
     // Create foil object (make sure to clear it)
-	fLeak = new MLeak();
+    fLeak = new MLeak(location);
 
     // Create main frame
-	fMain = new TGTransientFrame(p,main,w,h);
+    fMain = new TGTransientFrame(p,main,w,h);
 
     // Create tabs
     fTab = new TGTab(fMain, 300, 300);
-	fTab->Connect("Selected(Int_t)", "MLeakFrame", this, "DoTab(Int_t)");
+    fTab->Connect("Selected(Int_t)", "MLeakFrame", this, "DoTab(Int_t)");
     fIPlot = 0;
 
     TGCompositeFrame *tf;
@@ -104,20 +104,20 @@ MLeakFrame::MLeakFrame(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t
     fEcanvasAll[1] = new TRootEmbeddedCanvas("EcanvasAll1",fCF[1],w-20,h-120);
     tf->AddFrame(fCF[1], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-	tf = fTab->AddTab("-10m");
+    tf = fTab->AddTab("-10m");
     fCF[2] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
     fEcanvasAll[2] = new TRootEmbeddedCanvas("EcanvasAll2",fCF[2],w-20,h-120);
     tf->AddFrame(fCF[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-	tf = fTab->AddTab("M");
-	fCF[3] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
-	fEcanvasAll[3] = new TRootEmbeddedCanvas("EcanvasAll3",fCF[3],w-20,h-120);
-	tf->AddFrame(fCF[3], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    tf = fTab->AddTab("M");
+    fCF[3] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
+    fEcanvasAll[3] = new TRootEmbeddedCanvas("EcanvasAll3",fCF[3],w-20,h-120);
+    tf->AddFrame(fCF[3], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-	tf = fTab->AddTab("+10m");
-	fCF[4] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
-	fEcanvasAll[4] = new TRootEmbeddedCanvas("EcanvasAll4",fCF[4],w-20,h-120);
-	tf->AddFrame(fCF[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    tf = fTab->AddTab("+10m");
+    fCF[4] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
+    fEcanvasAll[4] = new TRootEmbeddedCanvas("EcanvasAll4",fCF[4],w-20,h-120);
+    tf->AddFrame(fCF[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
 
     // status bar
@@ -125,10 +125,10 @@ MLeakFrame::MLeakFrame(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t
     fStatusBar->SetParts(3);
     fStatusBar->Draw3DCorner(kFALSE);
 
-	for(Int_t itab=0; itab<5; itab++)
+    for(Int_t itab=0; itab<5; itab++)
     {
         fCanv = fEcanvasAll[itab]->GetCanvas();
-		fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
+        fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
                        "ZoomFoil(Int_t,Int_t,Int_t,TObject*)");
     }
     // Create a horizontal frame widget with buttons
@@ -138,27 +138,27 @@ MLeakFrame::MLeakFrame(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t
     // Create buttons for toolbar: load, execute, save and quit on the bottom of the panel
     load = new TGPictureButton(toolbar, gClient->GetPicture("ed_open.png"));
     load->SetToolTipText ("Open foil leakage current", 400);
-	load->Connect("Clicked()","MLeakFrame",this,"LoadCurrentFile()");
+    load->Connect("Clicked()","MLeakFrame",this,"LoadCurrentFile()");
     load->Resize(40, 40);
     toolbar->AddFrame(load, new TGLayoutHints(kLHintsCenterX));
 
     execute = new TGPictureButton(toolbar, gClient->GetPicture("ed_execute.png"));
     execute->SetToolTipText ("Evaluate foil", 400);
-	execute->Connect("Clicked()", "MLeakFrame", this, "ProcessFoilCurrents()");
+    execute->Connect("Clicked()", "MLeakFrame", this, "ProcessFoilCurrents()");
     execute->Resize(40, 40);
     toolbar->AddFrame(execute, new TGLayoutHints(kLHintsCenterX));
 
     save = new TGPictureButton(toolbar, gClient->GetPicture("ed_save.png"));
     save->SetToolTipText ("Print canvases to pdf", 400);
-	save->Connect("Clicked()","MLeakFrame",this,"Save()");
+    save->Connect("Clicked()","MLeakFrame",this,"Save()");
     save->Resize(40, 40);
     toolbar->AddFrame(save, new TGLayoutHints(kLHintsCenterX));
 
-	clear = new TGPictureButton(toolbar, gClient->GetPicture("ed_delete.png")); // ed_quit.png
-	clear->SetToolTipText ("Quit application", 400);
-	clear->Connect("Clicked()","MLeakFrame",this,"Clear()");
-	clear->Resize(40, 40);
-	toolbar->AddFrame(clear, new TGLayoutHints(kLHintsCenterX));
+    clear = new TGPictureButton(toolbar, gClient->GetPicture("ed_delete.png")); // ed_quit.png
+    clear->SetToolTipText ("Quit application", 400);
+    clear->Connect("Clicked()","MLeakFrame",this,"Clear()");
+    clear->Resize(40, 40);
+    toolbar->AddFrame(clear, new TGLayoutHints(kLHintsCenterX));
 
     help = new TGPictureButton(toolbar, gClient->GetPicture("ed_help.png"));
     help->SetToolTipText ("Help", 400);
@@ -169,23 +169,23 @@ MLeakFrame::MLeakFrame(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t
 
     fCF[0]->AddFrame(fEcanvasAll[0], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
     fCF[1]->AddFrame(fEcanvasAll[1], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-	fCF[2]->AddFrame(fEcanvasAll[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-	fCF[3]->AddFrame(fEcanvasAll[3], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
-	fCF[4]->AddFrame(fEcanvasAll[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[2]->AddFrame(fEcanvasAll[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[3]->AddFrame(fEcanvasAll[3], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[4]->AddFrame(fEcanvasAll[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
     fMain->AddFrame(fTab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));    
     fMain->AddFrame(fStatusBar, new TGLayoutHints(kLHintsExpandX) );
     fMain->AddFrame(toolbar, new TGLayoutHints(kLHintsCenterX | kLHintsBottom ));   
 
     // Set a name to the main frame
-	fMain->SetWindowName("LEAKAGE CURRENT");
+    fMain->SetWindowName("LEAKAGE CURRENT");
     // Map all subwindows of main frame
     fMain->MapSubwindows();
     // Initialize the layout algorithm
     fMain->Resize(fMain->GetDefaultSize());
     // Map main frame
     fMain->MapWindow();
-	fMain->SetCleanup(kDeepCleanup);
+    fMain->SetCleanup(kDeepCleanup);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -204,9 +204,9 @@ void MLeakFrame::DoTab(Int_t itab)
 
 MLeakFrame::~MLeakFrame()
 {
-	fMain->Cleanup();
+    fMain->Cleanup();
     delete fMain;
-	delete fLeak;
+    delete fLeak;
 }
 
 
@@ -221,17 +221,17 @@ void MLeakFrame::DrawCurrentStdOverview()
     fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->cd();
 
-	for(int ich=0; ich<fLeak->GetNC(); ich++)
+    for(int ich=0; ich<fLeak->GetNC(); ich++)
     {
         fPad[2][0]->cd(ich+1);
-		fLeak->DrawCurrentStd(ich, fPad[2][0], false);
+        fLeak->DrawCurrentStd(ich, fPad[2][0], false);
     }
-	fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
-				   "EventInfo(Int_t,Int_t,Int_t,TObject*)");
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
+                   "EventInfo(Int_t,Int_t,Int_t,TObject*)");
     fCanv->Modified();
     fCanv->Update();
 
-	std::cout << "DrawCurrentStdOverview() done...\n";
+    std::cout << "DrawCurrentStdOverview() done...\n";
 }
 
 void MLeakFrame::DrawCurrentTimeOverview()
@@ -241,12 +241,12 @@ void MLeakFrame::DrawCurrentTimeOverview()
     fCanv = fEcanvasAll[1]->GetCanvas();
     fCanv->cd();
 
-	for(int ich=0; ich<fLeak->GetNC(); ich++)
+    for(int ich=0; ich<fLeak->GetNC(); ich++)
     {
         fPad[2][1]->cd(ich+1);
-		fLeak->DrawCurrentTime(999, ich, fPad[2][1], false);
+        fLeak->DrawCurrentTime(999, ich, fPad[2][1], false);
     }
-	fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
                    "EventInfo(Int_t,Int_t,Int_t,TObject*)");
 
     fCanv->Modified();
@@ -255,23 +255,23 @@ void MLeakFrame::DrawCurrentTimeOverview()
 
 void MLeakFrame::DrawCurrentTimeOverviewZoom(Int_t itab)
 {
-	gStyle->SetOptStat(0);
+    gStyle->SetOptStat(0);
 
-	fCanv = fEcanvasAll[itab]->GetCanvas();
-	fCanv->cd();
+    fCanv = fEcanvasAll[itab]->GetCanvas();
+    fCanv->cd();
 
-	for(int ich=0; ich<fLeak->GetNC(); ich++)
-	{
-		fPad[2][itab]->cd(ich+1);
-		fLeak->DrawCurrentTime(itab, ich, fPad[2][itab], false);
-	}
-	fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
-				   "EventInfo(Int_t,Int_t,Int_t,TObject*)");
+    for(int ich=0; ich<fLeak->GetNC(); ich++)
+    {
+        fPad[2][itab]->cd(ich+1);
+        fLeak->DrawCurrentTime(itab, ich, fPad[2][itab], false);
+    }
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
+                   "EventInfo(Int_t,Int_t,Int_t,TObject*)");
 
-	fCanv->Modified();
-	fCanv->Update();
+    fCanv->Modified();
+    fCanv->Update();
 
-	std::cout << Form("DrawCurrentTimeOverview(%d) done...\n",itab);
+    std::cout << Form("DrawCurrentTimeOverview(%d) done...\n",itab);
 }
 
 void MLeakFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
@@ -311,7 +311,7 @@ Int_t MLeakFrame::ClickedOnPad(Int_t px, Int_t py)
     _py = 100 - _py;
 
     Int_t nrows, ncolumns;
-	switch(fLeak->GetType())
+    switch(fLeak->GetType())
     {
         case 0: // IROC
             ncolumns = 3; nrows = 6; break; 
@@ -331,7 +331,7 @@ Int_t MLeakFrame::ClickedOnPad(Int_t px, Int_t py)
     Int_t i_x = Int_t(_px/(w_p));
     Int_t i_y = Int_t(_py/(h_p));
     
-	Int_t nch = fLeak->GetNC();
+    Int_t nch = fLeak->GetNC();
     Int_t ret = i_y * ncolumns + i_x;
     // check if clicked on empty pad
     if(ret > nch || ret < 0) ret = -1;
@@ -347,7 +347,7 @@ void MLeakFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
     UInt_t w = fEcanvasAll[fIPlot]->GetWidth();
     
     Int_t nrows, ncolumns;
-	switch(fLeak->GetType())
+    switch(fLeak->GetType())
     {
         case 0: // IROC
             ncolumns = 3; nrows = 6; break; 
@@ -373,9 +373,9 @@ void MLeakFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
 
 void MLeakFrame::LoadCurrentFile()
 {   
-	static TString dir("~/cernbox/Work/ALICE/serviceWork");
+    static TString dir("~/cernbox/Work/ALICE/serviceWork");
     TGFileInfo fi;
-	fi.fFileTypes = filetypes_leak;
+    fi.fFileTypes = filetypes_leak;
     fi.fIniDir    = StrDup(dir);
     new TGFileDialog(gClient->GetRoot(), fMain, kFDOpen, &fi);
 
@@ -383,18 +383,18 @@ void MLeakFrame::LoadCurrentFile()
     {    
         printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
         dir = fi.fIniDir;
-		fLeak->LoadFoilCurrents(fi.fFilename);
+        fLeak->LoadFoilCurrents(fi.fFilename);
 
         CreateDividedPad();
 
         DrawCurrentStdOverview();
-		//DrawCurrentTimeOverview();
-		DrawCurrentTimeOverviewZoom(1);
-		DrawCurrentTimeOverviewZoom(2);
-		DrawCurrentTimeOverviewZoom(3);
-		DrawCurrentTimeOverviewZoom(4);
-	}
-	std::cout << "MLeakFrame::LoadCurrentFile() done...\n";
+        //DrawCurrentTimeOverview();
+        DrawCurrentTimeOverviewZoom(1);
+        DrawCurrentTimeOverviewZoom(2);
+        DrawCurrentTimeOverviewZoom(3);
+        DrawCurrentTimeOverviewZoom(4);
+    }
+    std::cout << "MLeakFrame::LoadCurrentFile() done...\n";
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -404,17 +404,17 @@ void MLeakFrame::LoadCurrentFile()
 
 void MLeakFrame::ProcessFoilCurrents()
 {
-	if(fLeak->GetLoadedStatus())
+    if(fLeak->GetLoadedStatus())
     {
-		fLeak->ProcessFoilCurrents();
+        fLeak->ProcessFoilCurrents();
         // re-draw to include processing results
         DrawCurrentStdOverview();
-		//DrawCurrentTimeOverview();
-		DrawCurrentTimeOverviewZoom(1);
-		DrawCurrentTimeOverviewZoom(2);
-		DrawCurrentTimeOverviewZoom(3);
-		DrawCurrentTimeOverviewZoom(4);
-	}
+        //DrawCurrentTimeOverview();
+        DrawCurrentTimeOverviewZoom(1);
+        DrawCurrentTimeOverviewZoom(2);
+        DrawCurrentTimeOverviewZoom(3);
+        DrawCurrentTimeOverviewZoom(4);
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -427,7 +427,7 @@ void MLeakFrame::ProcessFoilCurrents()
 void MLeakFrame::ZoomFoil(Int_t event, Int_t px, Int_t py, TObject * obj)
 {
     if(event!=11) return;
-	if(!fLeak->GetLoadedStatus()) return;
+    if(!fLeak->GetLoadedStatus()) return;
 
     Int_t foil_id = ClickedOnPad(px, py);
     if(foil_id < 0) return;
@@ -436,35 +436,35 @@ void MLeakFrame::ZoomFoil(Int_t event, Int_t px, Int_t py, TObject * obj)
 
     switch(fIPlot)
     {
-		case 0: mdia->DrawCurrentStd(foil_id, fLeak); break;
-		case 1: mdia->DrawCurrentTime(fIPlot ,foil_id, fLeak); break;
-		case 2: mdia->DrawCurrentTime(fIPlot, foil_id, fLeak); break;
-		case 3: mdia->DrawCurrentTime(fIPlot, foil_id, fLeak); break;
-		case 4: mdia->DrawCurrentTime(fIPlot, foil_id, fLeak); break;
-	}
+        case 0: mdia->DrawCurrentStd(foil_id, fLeak); break;
+        case 1: mdia->DrawCurrentTime(fIPlot ,foil_id, fLeak); break;
+        case 2: mdia->DrawCurrentTime(fIPlot, foil_id, fLeak); break;
+        case 3: mdia->DrawCurrentTime(fIPlot, foil_id, fLeak); break;
+        case 4: mdia->DrawCurrentTime(fIPlot, foil_id, fLeak); break;
+    }
 }
 
 void MLeakFrame::ZoomFoilPrint(Int_t foil_id, Int_t itab, TString filename)
 {
-	if(!fLeak->GetLoadedStatus()) return;
-	if(!fLeak->GetProcessedStatus()) return;
+    if(!fLeak->GetLoadedStatus()) return;
+    if(!fLeak->GetProcessedStatus()) return;
 
-	TCanvas * c = new TCanvas("ctemp","",580,580);
-	TPad * pad = new TPad("dialogpad","",0,0,1,1);
-	pad->SetLeftMargin(0.15); pad->SetRightMargin(0); pad->SetBottomMargin(0.15); pad->SetTopMargin(0);
-	pad->Draw();
-	pad->cd();
+    TCanvas * c = new TCanvas("ctemp","",580,580);
+    TPad * pad = new TPad("dialogpad","",0,0,1,1);
+    pad->SetLeftMargin(0.15); pad->SetRightMargin(0); pad->SetBottomMargin(0.15); pad->SetTopMargin(0);
+    pad->Draw();
+    pad->cd();
 
     switch(itab)
     {
-		case 0: fLeak->DrawCurrentStd(foil_id, pad, true); break;
-		case 1: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
-		case 2: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
-		case 3: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
-		case 4: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
-	}
-	c->Print(filename);
-	delete c;
+        case 0: fLeak->DrawCurrentStd(foil_id, pad, true); break;
+        case 1: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
+        case 2: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
+        case 3: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
+        case 4: fLeak->DrawCurrentTime(itab, foil_id, pad, true); break;
+    }
+    c->Print(filename);
+    delete c;
 }
 
 void MLeakFrame::Save()
@@ -472,18 +472,18 @@ void MLeakFrame::Save()
     gROOT->SetBatch(kTRUE);
 
     const Int_t N = fLeak->GetNC();
-	Int_t iplot=0;
-	std::cout << "save channels "  << N << std::endl;
+    Int_t iplot=0;
+    std::cout << "save channels "  << N << std::endl;
 
-	// save sat. current table
-	//fCanv = fLeak->DrawSatCurrentTable();
-	//fCanv->Print(Form("Report%.3d.png",iplot++));
+    // save sat. current table
+    //fCanv = fLeak->DrawSatCurrentTable();
+    //fCanv->Print(Form("Report%.3d.png",iplot++));
 
     // save std.dev overview
     fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->Print(Form("Report%.3d.png",iplot++));
 
-	for(Int_t ich = 0; ich<N; ich++)
+    for(Int_t ich = 0; ich<N; ich++)
     {
         ZoomFoilPrint(ich, 0, Form("Report%.3d.png",iplot++));
     }
@@ -497,7 +497,7 @@ void MLeakFrame::Save()
     fCanv = fEcanvasAll[4]->GetCanvas();
     fCanv->Print(Form("Report%.3d.png",iplot++));
 
-	for(Int_t ich = 0; ich<N; ich++)
+    for(Int_t ich = 0; ich<N; ich++)
     {
         ZoomFoilPrint(ich, 1, Form("Report%.3d.png",iplot++)); // save all time
         ZoomFoilPrint(ich, 2, Form("Report%.3d.png",iplot++)); // save measurement start
@@ -508,7 +508,7 @@ void MLeakFrame::Save()
 
     gROOT->SetBatch(kFALSE);
 
-	// merge to report and clean up intermediate files
+    // merge to report and clean up intermediate files
     TString command = Form(".! convert *.png %s",fLeak->GetSaveName().Data());
     std::cout << "Executing command: " << command << std::endl;
     gROOT->ProcessLine(command);
@@ -543,8 +543,8 @@ void MLeakFrame::DoExit()
 
 void MLeakFrame::Clear()
 {
-	// clear created histograms before loading a new one
-	// should be similar as destructor
+    // clear created histograms before loading a new one
+    // should be similar as destructor
 }
 
 
@@ -608,7 +608,7 @@ void MDialog::DrawCurrentTime(Int_t itab, Int_t foil_id, MLeak * foil)
     pad->Draw();
     pad->cd();
 
-	foil->DrawCurrentTime(itab, foil_id, pad, true);
+    foil->DrawCurrentTime(itab, foil_id, pad, true);
 
     fCanv->Modified();
     fCanv->Update();
