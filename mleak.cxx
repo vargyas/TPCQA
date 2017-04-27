@@ -4,14 +4,12 @@
 #define MLEAK_CXX
 
 
-enum location {kHelsinki, kBudapest};
-
 ////////////////////////////////////////////////////////////////////////
 /// \brief Default constructor
 ///
-MLeak::MLeak() :
+MLeak::MLeak(Int_t location) :
     fInFileName(0),
-	fLocation(0),
+    fLocation(location),
     fName(0),
     fType(0),
     fNumChannels(24),
@@ -23,25 +21,21 @@ MLeak::MLeak() :
     fQualityText(0),
     fMeasurementStart(0),
     fMeasurementEnd(0),
-	fhCurrentTime(0),
-	fhCurrentTime1(0),
-	fhCurrentTime2(0),
-	fhCurrentTime3(0),
-	fhCurrentStd(0),
+    fhCurrentTime(0),
+    fhCurrentTime1(0),
+    fhCurrentTime2(0),
+    fhCurrentTime3(0),
+    fhCurrentStd(0),
     fSatCurrent(0),
-	fhLimitTime(0),
-	fhLimitStd(0)
+    fhLimitTime(0),
+    fhLimitStd(0)
 {
     // default constructor
-	fhCurrentTime.SetOwner(kTRUE);
-	fhCurrentTime1.SetOwner(kTRUE);
-	fhCurrentTime2.SetOwner(kTRUE);
-	fhCurrentTime3.SetOwner(kTRUE);
-	fhCurrentStd.SetOwner(kTRUE);
-
-
-
-	fLocation = kBudapest;
+    fhCurrentTime.SetOwner(kTRUE);
+    fhCurrentTime1.SetOwner(kTRUE);
+    fhCurrentTime2.SetOwner(kTRUE);
+    fhCurrentTime3.SetOwner(kTRUE);
+    fhCurrentStd.SetOwner(kTRUE);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -50,18 +44,18 @@ MLeak::MLeak() :
 MLeak::~MLeak()
 {
 
-	if(fFlagIsLoaded)
-	{
-		// delete TList's objects
-		fhCurrentTime.Clear();
-		fhCurrentTime1.Clear();
-		fhCurrentTime2.Clear();
-		fhCurrentTime3.Clear();
-		fhCurrentStd.Clear();
+    if(fFlagIsLoaded)
+    {
+        // delete TList's objects
+        fhCurrentTime.Clear();
+        fhCurrentTime1.Clear();
+        fhCurrentTime2.Clear();
+        fhCurrentTime3.Clear();
+        fhCurrentStd.Clear();
 
-		delete fInTree;
+        delete fInTree;
 
-	}
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -133,11 +127,11 @@ void MLeak::ProcessFileName()
 ///
 void MLeak::LoadFoilCurrents(const TString filename)
 {   
-	std::cout << "MLeak::LoadFoilCurrents()\n";
+    std::cout << "MLeak::LoadFoilCurrents()\n";
 
-	// setting the file name and determine the foil type from that
-	fInFileName = filename;
-	ProcessFileName();
+    // setting the file name and determine the foil type from that
+    fInFileName = filename;
+    ProcessFileName();
     fDataDir = gSystem->pwd();
     GuessFoilName();
 
@@ -148,91 +142,91 @@ void MLeak::LoadFoilCurrents(const TString filename)
     if (fFlagIsLoaded) {
         std::cout << "clearing histograms...\n";
         fhCurrentStd.Clear();
-		fhCurrentTime.Clear();
-		fhCurrentTime1.Clear();
-		fhCurrentTime2.Clear();
-		fhCurrentTime3.Clear();
-		delete fInTree;
+        fhCurrentTime.Clear();
+        fhCurrentTime1.Clear();
+        fhCurrentTime2.Clear();
+        fhCurrentTime3.Clear();
+        delete fInTree;
     }
 
-	std::cout << "read input tree\n";
+    std::cout << "read input tree\n";
 
-	fInTree = new TTree("leakage_tree","Leakage current measurement");
+    fInTree = new TTree("leakage_tree","Leakage current measurement");
 
-	if(fLocation == kBudapest)
-	{
+    if(fLocation == 1)
+    {
         std::cout << "Location: Budapest\n";
-		fInTree->ReadFile(fInFileName,"time/D:I_00:I_01:I_02:I_03:I_04:I_05:I_06:I_07:I_08:I_09:I_10:I_11:I_12:I_13:I_14:I_15:I_16:I_17:I_18:I_19:I_20:I_21:I_22:I_23");
-	}
-	else if(fLocation == kHelsinki)
-	{
+        fInTree->ReadFile(fInFileName,"time/D:I_00:I_01:I_02:I_03:I_04:I_05:I_06:I_07:I_08:I_09:I_10:I_11:I_12:I_13:I_14:I_15:I_16:I_17:I_18:I_19:I_20:I_21:I_22:I_23");
+    }
+    else if(fLocation == 0)
+    {
         std::cout << "Location: Helsinki\n";
-		// tree defined in the header of the input file:
-		// Date/C:Time:TimeStamp/D:time:VMeas:IMeas:I_00:I_01:I_02:I_03:I_04:I_05:I_06:I_07:
-		// I_08:I_09:I_10:I_11:I_12:I_13:I_14:I_15:I_16:I_17:I_18:I_19:I_20:I_21:I_22:I_23
-		fInTree->ReadFile(fInFileName);
-	}
+        // tree defined in the header of the input file:
+        // Date/C:Time:TimeStamp/D:time:VMeas:IMeas:I_00:I_01:I_02:I_03:I_04:I_05:I_06:I_07:
+        // I_08:I_09:I_10:I_11:I_12:I_13:I_14:I_15:I_16:I_17:I_18:I_19:I_20:I_21:I_22:I_23
+        fInTree->ReadFile(fInFileName);
+    }
 
-	const Long64_t ndata = fInTree->GetEntries();
-	Double_t timesD = 0;
-	Double_t * currentsD = new Double_t(24);
-	fInTree->SetBranchAddress("time",&timesD);
+    const Long64_t ndata = fInTree->GetEntries();
+    Double_t timesD = 0;
+    Double_t * currentsD = new Double_t(24);
+    fInTree->SetBranchAddress("time",&timesD);
 
-	// divide 3 regions (first 10 minutes, middle, last 10 minutes)
+    // divide 3 regions (first 10 minutes, middle, last 10 minutes)
     const Long64_t itimes1=600, itimes2=ndata-2*600, itimes3=600;
 
-	for (Int_t ich = 0; ich<24; ich++)
-	{
-		fInTree->SetBranchAddress(Form("I_%.2d",ich), &currentsD[ich]);
-		fhCurrentStd.Add( new TH1D(Form("hCurrentStd_CH%d", ich), Form("CH %d", ich), 1000, -fLimit, fLimit) );
-		((TH1D*)fhCurrentStd.At(ich))->SetXTitle("");
-		((TH1D*)fhCurrentStd.At(ich))->SetYTitle("");
-		SetAxisStyle(((TH1D*)fhCurrentStd.At(ich)));
+    for (Int_t ich = 0; ich<24; ich++)
+    {
+        fInTree->SetBranchAddress(Form("I_%.2d",ich), &currentsD[ich]);
+        fhCurrentStd.Add( new TH1D(Form("hCurrentStd_CH%d", ich), Form("CH %d", ich), 1000, -fLimit, fLimit) );
+        ((TH1D*)fhCurrentStd.At(ich))->SetXTitle("");
+        ((TH1D*)fhCurrentStd.At(ich))->SetYTitle("");
+        SetAxisStyle(((TH1D*)fhCurrentStd.At(ich)));
 
-		fhCurrentTime.Add( new TGraph(ndata) );
-		fhCurrentTime1.Add( new TGraph(itimes1 ));
-		fhCurrentTime2.Add( new TGraph(itimes2 ));
-		fhCurrentTime3.Add( new TGraph(itimes3 ));
+        fhCurrentTime.Add( new TGraph(ndata) );
+        fhCurrentTime1.Add( new TGraph(itimes1 ));
+        fhCurrentTime2.Add( new TGraph(itimes2 ));
+        fhCurrentTime3.Add( new TGraph(itimes3 ));
 
-		((TGraph*)fhCurrentTime.At(ich))->SetTitle("");
-		((TGraph*)fhCurrentTime1.At(ich))->SetTitle("");
-		((TGraph*)fhCurrentTime2.At(ich))->SetTitle("");
-		((TGraph*)fhCurrentTime3.At(ich))->SetTitle("");
+        ((TGraph*)fhCurrentTime.At(ich))->SetTitle("");
+        ((TGraph*)fhCurrentTime1.At(ich))->SetTitle("");
+        ((TGraph*)fhCurrentTime2.At(ich))->SetTitle("");
+        ((TGraph*)fhCurrentTime3.At(ich))->SetTitle("");
 
-	}
+    }
 
     Long64_t it1=0, it2=0, it3=0;
-	fInTree->GetEvent(0);
-	Double_t time0 = timesD; // save 0 time
-	Double_t times_shift = 0;
+    fInTree->GetEvent(0);
+    Double_t time0 = timesD; // save 0 time
+    Double_t times_shift = 0;
     std::cout << "ndata = " << ndata << std::endl;
 
-	for (Int_t ich = 0; ich<fNumChannels; ich++)
-	{
-		it1=0; it2=0; it3=0;
+    for (Int_t ich = 0; ich<fNumChannels; ich++)
+    {
+        it1=0; it2=0; it3=0;
 
         for( Long64_t idata=0; idata<ndata; idata++)
-		{
-			fInTree->GetEvent(idata);
-			times_shift = timesD-time0;
+        {
+            fInTree->GetEvent(idata);
+            times_shift = timesD-time0;
 
-			((TH1D*)fhCurrentStd.At(ich))->Fill(currentsD[ich]);
-			((TGraph*)fhCurrentTime.At(ich))->SetPoint(idata,times_shift, currentsD[ich]);
+            ((TH1D*)fhCurrentStd.At(ich))->Fill(currentsD[ich]);
+            ((TGraph*)fhCurrentTime.At(ich))->SetPoint(idata,times_shift, currentsD[ich]);
 
-			// Only fill detailed graphs if enough data
-			if(ndata>1400)
-			{
-				if(times_shift<600.)
-					((TGraph*)fhCurrentTime1.At(ich))->SetPoint(it1++, times_shift, currentsD[ich]);
+            // Only fill detailed graphs if enough data
+            if(ndata>1400)
+            {
+                if(times_shift<600.)
+                    ((TGraph*)fhCurrentTime1.At(ich))->SetPoint(it1++, times_shift, currentsD[ich]);
                 if(times_shift>600. && times_shift<(ndata-600.))
-					((TGraph*)fhCurrentTime2.At(ich))->SetPoint(it2++, times_shift, currentsD[ich]);
+                    ((TGraph*)fhCurrentTime2.At(ich))->SetPoint(it2++, times_shift, currentsD[ich]);
                 if(times_shift>(ndata-600.))
                     ((TGraph*)fhCurrentTime3.At(ich))->SetPoint(it3++, times_shift, currentsD[ich]);
-			}
-		}
-	}
-	// ((TH1D*)fhCurrentStd.At(2))->Print();
-	// std::cout << ndata << "\t" << it1 << "\t" << it2 << "\t" << it3 << "\t" << "1307180 " << std::endl;
+            }
+        }
+    }
+    // ((TH1D*)fhCurrentStd.At(2))->Print();
+    // std::cout << ndata << "\t" << it1 << "\t" << it2 << "\t" << it3 << "\t" << "1307180 " << std::endl;
 
     fFlagIsLoaded = kTRUE;
 }
@@ -416,15 +410,15 @@ void MLeak::DrawLimitTime()
 void MLeak::DrawCurrentTime(Int_t itab, Int_t ich, TPad * p, Bool_t drawaxes)
 {
     gStyle->SetOptStat(0);
-	TGraph * g;
-	switch(itab)
-	{
-		case 1: g = ((TGraph*)fhCurrentTime.At(ich)); break;
-		case 2: g = ((TGraph*)fhCurrentTime1.At(ich)); break;
-		case 3: g = ((TGraph*)fhCurrentTime2.At(ich)); break;
-		case 4: g = ((TGraph*)fhCurrentTime3.At(ich)); break;
-		default: g = ((TGraph*)fhCurrentTime.At(ich)); break;
-	}
+    TGraph * g;
+    switch(itab)
+    {
+        case 1: g = ((TGraph*)fhCurrentTime.At(ich)); break;
+        case 2: g = ((TGraph*)fhCurrentTime1.At(ich)); break;
+        case 3: g = ((TGraph*)fhCurrentTime2.At(ich)); break;
+        case 4: g = ((TGraph*)fhCurrentTime3.At(ich)); break;
+        default: g = ((TGraph*)fhCurrentTime.At(ich)); break;
+    }
     g->SetLineColor( GetProcessedColor(ich) );
 
     if(drawaxes)
@@ -433,7 +427,7 @@ void MLeak::DrawCurrentTime(Int_t itab, Int_t ich, TPad * p, Bool_t drawaxes)
         g->GetXaxis()->CenterTitle();
         g->GetYaxis()->CenterTitle();
         g->GetXaxis()->SetTitle("time [sec]");
-		g->GetYaxis()->SetTitle("Leakage current [nA]");
+        g->GetYaxis()->SetTitle("Leakage current [nA]");
     }
 
     g->Draw("AL");
@@ -474,7 +468,7 @@ void MLeak::DrawCurrentTime(Int_t itab, Int_t ich, TPad * p, Bool_t drawaxes)
 //----------------------------------------------------------------------------------
 void MLeak::DrawCurrentStd(Int_t ich, TPad * p, Bool_t drawaxes)
 {
-	std::cout << " MLeak::DrawCurrentStd(Int_t ich, TPad * p, Bool_t drawaxes) done...\n";
+    std::cout << " MLeak::DrawCurrentStd(Int_t ich, TPad * p, Bool_t drawaxes) done...\n";
     gStyle->SetOptStat(0);
     gStyle->SetOptTitle(0);
 
@@ -567,21 +561,21 @@ void MLeak::SetAxisStyle(TH1D * h)
 
 /*TCanvas * MLeak::DrawSatCurrentTable()
 {
-	TCanvas * csat = new TCanvas("csat", "", 800, 600);
-	csat->cd();
+    TCanvas * csat = new TCanvas("csat", "", 800, 600);
+    csat->cd();
 
-	TPaveLabel * plsat[24];
+    TPaveLabel * plsat[24];
 
-	for(Int_t ich=0; ich<fNumChannels; ich++)
-	{
-		TString textsat = Form("CH %.2d \t %.4f nA",ich, fSatCurrent.at(ich) );
-		plsat[ich] = new TPaveLabel(0.0, 100./Double_t(fNumChannels)*ich, 100, 100./Double_t(fNumChannels)*(ich+1), textsat);
-		plsat[ich]->SetBorderSize(0); plsat[ich]->SetFillColor(kWhite);
-		//ytitle[itab]->SetTextSize(20./(fPad[1][itab]->GetBBox().fHeight));
-		plsat[ich]->SetTextFont(42);
-		plsat[ich]->Draw();
-	}
-	return csat;
+    for(Int_t ich=0; ich<fNumChannels; ich++)
+    {
+        TString textsat = Form("CH %.2d \t %.4f nA",ich, fSatCurrent.at(ich) );
+        plsat[ich] = new TPaveLabel(0.0, 100./Double_t(fNumChannels)*ich, 100, 100./Double_t(fNumChannels)*(ich+1), textsat);
+        plsat[ich]->SetBorderSize(0); plsat[ich]->SetFillColor(kWhite);
+        //ytitle[itab]->SetTextSize(20./(fPad[1][itab]->GetBBox().fHeight));
+        plsat[ich]->SetTextFont(42);
+        plsat[ich]->Draw();
+    }
+    return csat;
 }*/
 
 
