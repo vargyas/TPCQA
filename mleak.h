@@ -38,8 +38,8 @@
 #include "TStyle.h"
 #include "TEnv.h"
 
-#include "RQ_OBJECT.h"		// use this for linux
-//#include "RQ_Object.h"			// use this for mac and win
+#include "RQ_OBJECT.h"      // use this for linux
+//#include "RQ_Object.h"            // use this for mac and win
 
 #include "TQObject.h"
 #include "TApplication.h"
@@ -84,7 +84,7 @@
 ////////////////////////////////////////////////////////////////////////
 const char *filetypes_leak[] = { "Text files",    "*.[tT][xX][tT]",
                             "ROOT files",    "*.root",
-							"All files",     "*",
+                            "All files",     "*",
                             0,               0 };
 
 ////////////////////////////////////////////////////////////////////////
@@ -177,7 +177,7 @@ RQ_OBJECT("MLeak")
 
 private: 
     TTree * fInTree;                    ///< Tree directly read from inputfile, contains all information from the measurement
-	Int_t fLocation;					///< File format and other minor changes depend on lab. Currently kHelsinki=0, kBudapest=1 are defined.
+    Int_t fLocation;                    ///< File format and other minor changes depend on lab. Currently kHelsinki=0, kBudapest=1 are defined.
     Int_t fType;                        ///< Type of the foil: 0=IROC, 1=OROC1, 2=OROC2, 3=OROC3, 4=else
     Int_t fNumChannels;                 ///< Number of channels: 18 for IROC, 24 for OROC
     TString fName;                      ///< Name of the foil 
@@ -193,25 +193,25 @@ private:
     Double_t fMeasurementStart;         ///< Start of measurement, after ramping is finished, determined by DetectMeasurementStart()
     Double_t fMeasurementEnd;           ///< End of measurement, determined by DetectMeasurementStop()
     Double_t fLimit;                    ///< Acceptance leakage current limit in nA
-	TList fhCurrentTime;                ///< List of time-dependent leakage current graphs
-	TList fhCurrentTime1;               ///< List of time-dependent leakage current graphs
-	TList fhCurrentTime2;               ///< List of time-dependent leakage current graphs
-	TList fhCurrentTime3;               ///< List of time-dependent leakage current graphs
-	TList fhCurrentStd;                 ///< List of leakage current distribution histograms
+    TList fhCurrentTime;                ///< List of time-dependent leakage current graphs
+    TList fhCurrentTime1;               ///< List of time-dependent leakage current graphs
+    TList fhCurrentTime2;               ///< List of time-dependent leakage current graphs
+    TList fhCurrentTime3;               ///< List of time-dependent leakage current graphs
+    TList fhCurrentStd;                 ///< List of leakage current distribution histograms
 
     std::vector<Double_t> fSatCurrent;  ///< Saturation current in nA
 
-	void ProcessFileName();
+    void ProcessFileName();
     
     void SaveFoil();                    ///< Saves obtained foil information and quality to either a pdf or a database
 
 public:
-	MLeak();                            ///< Default constructor
-	virtual ~MLeak();                   ///< Default destructor
+    MLeak(Int_t location);              ///< Default constructor
+    virtual ~MLeak();                   ///< Default destructor
 
     void LoadFoilCurrents(const TString infilename);    ///< Loads foil information from file selected by mouse and displays it
     void ProcessFoilCurrents();         ///< Processes the measured foil current(s) and evaulates the foil
-	void GuessFoilName();
+    void GuessFoilName();
     TString GetSaveName();
     
     Int_t GetNC();                      ///< Returns number of channels (fNumChannels)
@@ -227,14 +227,14 @@ public:
     void CreateHLimitStd(Int_t ich, Double_t ymax); ///<
     void DrawHLimitTime(Int_t ich);
     void DrawHLimitStd(Int_t ich);
-	void DrawCurrentTime(Int_t itab, Int_t id, TPad * p, Bool_t axes);
+    void DrawCurrentTime(Int_t itab, Int_t id, TPad * p, Bool_t axes);
     void DrawCurrentStd(Int_t ich, TPad * p, Bool_t axes);
     void DrawCurrentCorr(Int_t ich, TPad * p, Bool_t axes);
 
     void DrawSatCurrentTime(Int_t ich);
 
     void DrawSatCurrentStd(Int_t ich);
-	//void DrawCorrCurrent();
+    //void DrawCorrCurrent();
     void DrawMeasurementRange(Int_t ich);
     void DrawSparks(Int_t ich, TString opt);
 
@@ -254,7 +254,7 @@ public:
     void DrawLimitTime();
     void DrawLimitStd(Int_t ich);
 
-	TCanvas * DrawSatCurrentTable();
+    TCanvas * DrawSatCurrentTable();
 };
 
 #endif // MLEAK_H
