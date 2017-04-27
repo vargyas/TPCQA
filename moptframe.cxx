@@ -141,7 +141,7 @@ void MOptFrame::DrawFoilNameLabel(Bool_t clear)
     lname->SetTextSize(30./(fPad[3][0]->GetBBox().fHeight));
     lname->SetTextFont(42);
 
-    for(Int_t itab=0; itab<4; itab++)
+    for(Int_t itab=0; itab<5; itab++)
     {
         fCanv = fEcanvasAll[itab]->GetCanvas();
         fCanv->cd(); fPad[3][itab]->cd();
