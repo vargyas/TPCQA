@@ -34,8 +34,8 @@
 #include "TStyle.h"
 #include "TEnv.h"
 
-#include "RQ_OBJECT.h"		// use this for linux
-//#include "RQ_Object.h"			// use this for mac and win
+#include "RQ_OBJECT.h"      // use this for linux
+//#include "RQ_Object.h"            // use this for mac and win
 
 #include "TQObject.h"
 #include "TApplication.h"
@@ -78,53 +78,57 @@
 #include <TFrame.h>
 
 enum sides {kSegmented, kUnsegmented};
-enum holetype {kInner, kOuter};
+enum holetype {kInner, kOuter, kRim};
 
 const char *filetypes_opt[] = { "ROOT files",    "*.root",
-								"Text files",    "*.[tT][xX][tT]",
-								"HDF5 files",	 "*.h5",
-								"All files",     "*",
-								0,               0 };
+                                "Text files",    "*.[tT][xX][tT]",
+                                "HDF5 files",    "*.h5",
+                                "All files",     "*",
+                                0,               0 };
 
 class MOpt
 {
 RQ_OBJECT("MOpt")
 
 private:
-    Int_t fType;                        ///< Type of the foil: 0=IROC, 1=OROC1, 2=OROC2, 3=OROC3, 4=else
-    TString fInFileName[2];		///< Input file name
+    Int_t fType;                ///< Type of the foil: 0=IROC, 1=OROC1, 2=OROC2, 3=OROC3, 4=else (not recognised)
+    Int_t fLocation;
+    TString fInFileName[2];     ///< Input file name
     TString fDataDir[2];
     TFile * fInFile[2];
-	TString fName;				///< Name of the foils as guessed from the directory name
-    TTree * fTree[2][2];    ///<
-	TH2D * fhMapDiam[2][2]; ///< Segmented/unsegmented side, inner and outer whole map histograms
-	TH2D * fhMapStd[2][2]; ///< Segmented/unsegmented side, inner and outer whole map histograms
-	TH2D * fhMapN[2][2];
-    TH1D * fhProfDiam[2][2];
-	TF1 * ffProfFit[2][2]; ///< Gaussian fit to profile diagrams
-	Bool_t fIsLoaded[2]; ///<
+    TString fName;              ///< Name of the foils as guessed from the directory name
+    TTree * fTree[2][2];        ///< Input tree, S/U side, inner and outer
+    TH2D * fhMapDiam[2][2];     ///< S/U side, inner and outer hole map histograms
+    TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
+    TH2D * fhMapN[2][2];
+    TH2D * fhMapRim[2];         ///< S/U side rim map (calculated here)
+    TH1D * fhProfDiam[2][3];
+    TF1 * ffProfFit[2][3];      ///< Gaussian fit to profile diagrams
+    Bool_t fIsLoaded[2];        ///<
+    Double_t fConv;             ///< Conversion from pixel value to millimeter.
 
 public:
-	MOpt();
-	virtual ~MOpt();
+    MOpt(Int_t location);
+    virtual ~MOpt();
     void CreateOutputContainers(Int_t which_side);
     void FillOutputContainers(Int_t which_side);
+    void CalculateRim(Int_t which_side);
+    void CalculateStd(Int_t which_side);
     void GuessFoilName(const TString name); ///< Guess foil name from file/folder name
     void GuessFoilType(); ///< Guesses foil type from guessed name
     void LoadFile(const TString filename, Int_t which_side);
     void CloseFile(Int_t which_side);
-	void DrawMaps(TPad * p, Int_t which_side, Int_t which_holetype, Int_t which_histo);
-	//void DrawDensityMaps(TPad * p, Int_t which_side, Int_t which_holetype);
-	void DrawProfiles(TPad * p, Int_t which_side);
-	void Save();
+    void DrawMaps(TPad * p, Int_t which_side, Int_t which_holetype, Int_t which_histo);
+    //void DrawDensityMaps(TPad * p, Int_t which_side, Int_t which_holetype);
+    void DrawProfiles(TPad * p, Int_t which_side);
+    void Save();
     void SaveTxt();
-	void SaveTxt1D();
-	void SaveTxt2D();
+    void SaveTxt1D();
+    void SaveTxt2D();
     TString GetSaveName();
-	void DrawFitResult(Int_t which_side);
-	TString GetFitResult(Int_t which_side, Int_t which_hole);
-	TString GetMeanWidth(Int_t which_side, Int_t which_hole);
-
+    void DrawFitResult(Int_t which_side);
+    TString GetFitResult(Int_t which_side, Int_t which_hole);
+    TString GetMeanWidth(Int_t which_side, Int_t which_hole);
 
     TString GetInFileName(Int_t i) {return fInFileName[i]; }
     TString GetFoilName() { return fName; }
