@@ -161,23 +161,35 @@ void MOpt::CreateOutputContainers(Int_t which_side)
     TString holtyp[] = {"inner", "outer"};
     Int_t i = which_side;
 
+    // setup bin sizes
+    Double_t xstep = 1; // bin width in x [mm]
+    Double_t ystep = 1; // bin width in y [mm]
+
     // histogram sizes are the blueprint sizes in mm with the copper area included
-    //               iroc,  oroc1, oroc2, oroc3, unrecognised (largest is chosen)
+    // iroc,  oroc1, oroc2, oroc3, unrecognised (largest is chosen)
     Double_t xx[] = {467.0, 595.8, 726.2, 867.0, 867.0};
     Double_t yy[] = {496.5, 353.0, 350.0, 379.0, 379.0};
-    Int_t nx[]    = {480,   480,   480,   480,   480};
-    Int_t ny[]    = {320,   320,   320,   320,   320};
 
-    //Double_t x_o[] = {60, 100};
-    //Double_t x_i[] = {40, 80};
-    //Double_t xbins = {0};
+    // correction to increase above sizes
+    // (nbins will grow accordingly, keeping the distance ratio)
+    Double_t corrx=0.05;
+    Double_t corry=0.05;
+
+    Int_t nx[5], ny[5];
+    for(Int_t i=0; i<5; ++i) {
+        //xx[i]=xx[i]*corrx;
+        //yy[i]=yy[i]*corry;
+        nx[i] = xx[i]*(1+corrx)/xstep;
+        ny[i] = yy[i]*(1+corry)/ystep;
+    }
+
 
     for(Int_t j=0; j<2; j++)
     {
         // might need adjustment -yy[fType]+offset, offset
-        fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()),nx[fType],0,xx[fType],ny[fType],-yy[fType], 0);
-        fhMapStd[i][j]  = new TH2D(Form("hmap_std_%d_%d",i,j),Form("std. of %s diameter",holtyp[j].Data()),nx[fType],0,xx[fType],ny[fType],-yy[fType], 0);
-        fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),Form("N %s",holtyp[j].Data()),nx[fType],0,xx[fType],ny[fType],-yy[fType], 0);
+        fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapStd[i][j]  = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()),nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),  Form("N %s",holtyp[j].Data()),                nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
     }
     fhProfDiam[i][kInner] = new TH1D(Form("hprof_diam_%d_%d",i,kInner),"",300,0,110);
     fhProfDiam[i][kOuter] = new TH1D(Form("hprof_diam_%d_%d",i,kOuter),"",300,0,110);
@@ -216,7 +228,8 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fhProfDiam[which_side][kInner]->Fit(ffProfFit[which_side][kInner], "RNQ","",40,80);
     fhProfDiam[which_side][kOuter]->Fit(ffProfFit[which_side][kOuter], "RNQ","",60,100);
 
-    CalculateStd(which_side);
+    CalculateStd(which_side, kInner);
+    CalculateStd(which_side, kOuter);
 
     CalculateRim(which_side);
 
@@ -254,32 +267,50 @@ void MOpt::CalculateRim(Int_t which_side)
     fhProfDiam[which_side][kRim]->Fit(ffProfFit[which_side][kRim], "RNQ","",0,20);
 }
 //----------------------------------------------------------------------------------
-void MOpt::CalculateStd(Int_t which_side)
+void MOpt::CalculateStd(Int_t which_side, Int_t which_hole)
 {
-    Double_t mean_i = ffProfFit[which_side][kInner]->GetParameter(1);
-    Double_t mean_o = ffProfFit[which_side][kOuter]->GetParameter(1);
-    Double_t std_i, std_o, inner, outer;
-    std::cout << "Mean inner " << mean_i << "\nMean outer " << mean_o << std::endl;
-    for(Int_t ibx=1; ibx<=fhMapStd[which_side][0]->GetNbinsX(); ++ibx)
-    {
-        for(Int_t iby=1; iby<=fhMapStd[which_side][0]->GetNbinsY(); ++iby)
-        {
-            inner = fhMapDiam[which_side][kInner]->GetBinContent(ibx, iby);
-            outer = fhMapDiam[which_side][kOuter]->GetBinContent(ibx, iby);
-            std_i = inner-mean_i;
-            std_o = outer-mean_o;
-            fhMapStd[which_side][kInner]->SetBinContent(ibx, iby, std_i);
-            fhMapStd[which_side][kOuter]->SetBinContent(ibx, iby, std_o);
-        }
+    // needs mean histogram
+    TTreeReader reader(fTree[which_side][which_hole]->GetName(), fInFile[which_side]);
+    TTreeReaderValue<Double_t> d_t(reader, "d");
+    TTreeReaderValue<Double_t> x_t(reader, "y"); // this is on purpose, I don't know why it does flip x-y though
+    TTreeReaderValue<Double_t> y_t(reader, "x"); // this is on purpose, I don't know why it does flip x-y though
+
+    Int_t globalBin = 0;
+    Double_t mean = 0;
+    Int_t counter = 0;
+    while(reader.Next()) {
+        globalBin = fhMapStd[which_side][which_hole]->FindBin(*x_t*4.34/1000., *y_t*4.34/1000.);
+        mean = fhMapDiam[which_side][which_hole]->GetBinContent(globalBin);
+
+        fhMapStd[which_side][which_hole]->Fill(*x_t*4.34/1000., *y_t*4.34/1000., pow((*d_t*4.34-mean),2.));
+        //if(counter<20000) {
+        //  cout << globalBin << "\t" << *x_t*4.34/1000. << "\t" << *y_t*4.34/1000. << "\t" << mean  << "\t" << *d_t*4.34 << endl;
+        //  ++counter;
+        //}
     }
-    //fhMapStd[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
-    //fhMapStd[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
-    fhMapStd[which_side][kInner]->GetZaxis()->SetRangeUser(-20, 20);
-    fhMapStd[which_side][kOuter]->GetZaxis()->SetRangeUser(-20, 20);
-
-    std::cout << "Mean inner " << mean_i << "\nMean outer " << mean_o << std::endl;
-
+    fhMapStd[which_side][which_hole]->Divide(fhMapN[which_side][which_hole]);
+    fhMapStd[which_side][which_hole]->Print();
+    fhMapStd[which_side][which_hole]->GetZaxis()->SetRangeUser(0,4);
 }
+
+void MOpt::GetOrigoShift(Int_t which_side)
+{
+    // Finding the middle of the foil, that would be the vector
+    // Get x first (easy because it is symmetric):
+    TH1D * hx = (TH1D*) fhMapN[which_side][kInner]->ProjectionX("hx")->Clone();
+    fShift[0] = hx->GetMean();
+
+    // Get y. More complicated because of asymmetry in sector boundaries (GetMean would
+    // be slightly off).
+    Int_t meanbin = fhMapN[which_side][kInner]->GetXaxis()->FindBin(fShift[0]);
+    TH1D * hy = (TH1D*) fhMapN[which_side][kInner]->ProjectionY("hy",meanbin-10,meanbin+10)->Clone();
+    Int_t startBin = hy->FindFirstBinAbove(200);
+    Int_t stopBin = hy->FindLastBinAbove(200);
+    Double_t start = hy->GetBinCenter(startBin);
+    Double_t stop = hy->GetBinCenter(stopBin);
+    fShift[1] = (stop+start)/2.;
+}
+
 //----------------------------------------------------------------------------------
 TString MOpt::GetFitResult(Int_t which_side, Int_t which_hole)
 {
@@ -330,8 +361,47 @@ void MOpt::DrawMaps(TPad * p, Int_t which_side, Int_t which_hole, Int_t which_hi
     if(which_histo==2) fhMapN[which_side][which_hole]->Draw("colz");
     if(which_histo==3) fhMapRim[which_side]->Draw("colz");
 
+    DrawOrigoShift(which_side);
+    DrawFrame();
+
     p->Modified();
     p->Update();
+}
+void MOpt::DrawOrigoShift(Int_t which_side)
+{
+    GetOrigoShift(which_side);
+    std::cout << "shift is " << fShift[0] << "\t" << fShift[1] << std::endl;
+    TLine * ls[4];
+    ls[0] = new TLine(fShift[0], fhMapN[which_side][0]->GetYaxis()->GetBinCenter(0), fShift[0], fhMapN[which_side][0]->GetYaxis()->GetBinCenter(fhMapN[which_side][0]->GetNbinsY()));
+    ls[1] = new TLine(fhMapN[which_side][0]->GetXaxis()->GetBinCenter(0), fShift[1], fhMapN[which_side][0]->GetXaxis()->GetBinCenter(fhMapN[which_side][0]->GetNbinsX()), fShift[1]);
+    ls[0]->Draw();
+    ls[1]->Draw();
+}
+void MOpt::DrawFrame()
+{
+
+    // blueprint sizes in mm with the copper area included
+    // iroc,  oroc1, oroc2, oroc3, unrecognised (largest is chosen)
+    Double_t xl_bp[] = {467.0, 595.8, 726.2, 867.0, 867.0};
+    Double_t xs_bp[] = {292. , 457.8, 602.8, 733.3, 733.3};
+    Double_t m_bp[]  = {496.5, 353.0, 350.0, 379.0, 379.0};
+    Double_t xl = xl_bp[fType];
+    Double_t xs = xs_bp[fType];
+    Double_t m  = m_bp[fType];
+    Double_t sx = fShift[0];
+    Double_t sy = fShift[1];
+    TLine * lf[4];
+    // write as if the middle of the foil is in the origo, then shift it
+    // long base
+    lf[0] = new TLine(-xl/2.+sx, m/2.+sy, xl/2.+sx, m/2.+sy);
+    // short base
+    lf[1] = new TLine(-xs/2.+sx, -m/2.+sy, xs/2.+sx, -m/2.+sy);
+    // left side
+    lf[2] = new TLine(-xl/2.+sx, m/2.+sy, -xs/2.+sx, -m/2.+sy);
+    // right side
+    lf[3] = new TLine(xl/2.+sx, m/2.+sy, xs/2.+sx, -m/2.+sy);
+
+    for(Int_t i=0;i<4;++i) lf[i]->Draw();
 }
 
 //----------------------------------------------------------------------------------
@@ -391,33 +461,62 @@ void MOpt::SaveTxt2D()
     const Int_t nx = fhMapDiam[0][0]->GetNbinsX();
     const Int_t ny = fhMapDiam[0][0]->GetNbinsY();
 
-    Int_t n_i = 0;
-    Int_t n_o = 0;
     Double_t x = 0;
     Double_t y = 0;
-    Double_t d_i = 0;
-    Double_t d_o = 0;
+
+    Int_t n_i_s = 0;
+    Int_t n_o_s = 0;
+    Int_t n_i_u = 0;
+    Int_t n_o_u = 0;
+
+    Double_t d_i_s = 0;
+    Double_t d_o_s = 0;
+    Double_t d_i_u = 0;
+    Double_t d_o_u = 0;
+
+    Double_t std_i_s = 0;
+    Double_t std_o_s = 0;
+    Double_t std_i_u = 0;
+    Double_t std_o_u = 0;
+
 
     TString outfilename;
-    TString side[] = {"seg", "unseg"};
-    for(Int_t iside=0; iside<2; iside++)
+    //for(Int_t iside=0; iside<2; iside++)
     {
-        outfilename = Form("%s/../%s_%s_2D.txt",fDataDir[0].Data(), fName.Data(), side[iside].Data());
-        std::cout << "Saving diameter map to: " << outfilename << std::endl;
+        outfilename = Form("%s/../%s_2D.txt",fDataDir[0].Data(), fName.Data());
+        std::cout << "Saving map to: " << outfilename << std::endl;
         std::ofstream ofs (outfilename.Data(), std::ofstream::out);
 
         for(Int_t ix=1; ix<=nx; ix++)
         {
             for(Int_t iy=1; iy<=ny; iy++)
             {
-                n_i = fhMapN[iside][0]->GetBinContent(ix, iy);
-                n_o = fhMapN[iside][1]->GetBinContent(ix, iy);
+                //
+                x = fhMapN[0][0]->GetXaxis()->GetBinCenter(ix) - fShift[0];
+                y = fhMapN[0][0]->GetYaxis()->GetBinCenter(iy) - fShift[1];
 
-                d_i = fhMapDiam[iside][0]->GetBinContent(ix, iy);
-                d_o = fhMapDiam[iside][1]->GetBinContent(ix, iy);
+                n_i_s = fhMapN[kSegmented][kInner]->GetBinContent(ix, iy);
+                n_o_s = fhMapN[kSegmented][kOuter]->GetBinContent(ix, iy);
+                n_i_u = fhMapN[kUnsegmented][kInner]->GetBinContent(ix, iy);
+                n_o_u = fhMapN[kUnsegmented][kOuter]->GetBinContent(ix, iy);
 
-                ofs << ix << "\t" << iy  << "\t" << d_i << "\t" << d_o << "\t" << n_i << "\t" << n_o << std::endl;
+                d_i_s = fhMapDiam[kSegmented][kInner]->GetBinContent(ix, iy);
+                d_o_s = fhMapDiam[kSegmented][kOuter]->GetBinContent(ix, iy);
+                d_i_u = fhMapDiam[kUnsegmented][kInner]->GetBinContent(ix, iy);
+                d_o_u = fhMapDiam[kUnsegmented][kOuter]->GetBinContent(ix, iy);
+
+                std_i_s = fhMapStd[kSegmented][kInner]->GetBinContent(ix, iy);
+                std_o_s = fhMapStd[kSegmented][kOuter]->GetBinContent(ix, iy);
+                std_i_u = fhMapStd[kUnsegmented][kInner]->GetBinContent(ix, iy);
+                std_o_u = fhMapStd[kUnsegmented][kOuter]->GetBinContent(ix, iy);
+
+
+                ofs << x <<"\t"<< y <<"\t"<< d_i_s << "\t" << d_o_s << "\t" << d_i_u << "\t" << d_o_u << "\t"
+                                          << n_i_s << "\t" << n_o_s << "\t" << n_i_u << "\t" << n_o_u << "\t"
+                                          << std_i_s << "\t" << std_o_s << "\t" << std_i_u << "\t" << std_o_u << "\t"
+                                          << std::endl;
             }
+            ofs << std::endl;
         }
         ofs.close();
     }
@@ -427,7 +526,7 @@ void MOpt::SaveTxt1D()
 {
     const Int_t N = fhProfDiam[0][0]->GetNbinsX();
     const TString outfilename = Form("%s/../%s_1D.txt",fDataDir[0].Data(), fName.Data());
-    std::cout << "Saving diameter profile to: " << outfilename << std::endl;
+    std::cout << "Saving profile to: " << outfilename << std::endl;
     std::ofstream ofs (outfilename.Data(), std::ofstream::out);
 
     Double_t x = 0;
