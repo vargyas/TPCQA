@@ -7,7 +7,7 @@ MLauncher::MLauncher(const TGWindow *p, UInt_t w, UInt_t h)
     // location is set here:
     TString loc[] = {"Helsinki","Budapest"};
     enum location {kHelsinki, kBudapest};
-    fLocation = kBudapest;
+    fLocation = kHelsinki;
     std::cout << "Location is set to: " << loc[fLocation] << std::endl;
 
     std::cout << "Your system arch. is: " << gSystem->GetBuildArch() << std::endl;
