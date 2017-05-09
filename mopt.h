@@ -29,6 +29,8 @@
 #include "TLine.h"
 #include "TPaveLabel.h"
 
+#include "TTreeReader.h"
+#include "TTreeReaderValue.h"
 
 #include "TROOT.h"
 #include "TStyle.h"
@@ -106,6 +108,7 @@ private:
     TF1 * ffProfFit[2][3];      ///< Gaussian fit to profile diagrams
     Bool_t fIsLoaded[2];        ///<
     Double_t fConv;             ///< Conversion from pixel value to millimeter.
+    Double_t fShift[2];         ///< Vector to shift the middle of foil to (0, 0)
 
 public:
     MOpt(Int_t location);
@@ -113,13 +116,14 @@ public:
     void CreateOutputContainers(Int_t which_side);
     void FillOutputContainers(Int_t which_side);
     void CalculateRim(Int_t which_side);
-    void CalculateStd(Int_t which_side);
+    void CalculateStd(Int_t which_side, Int_t which_hole);
+    void GetOrigoShift(Int_t which_side);
     void GuessFoilName(const TString name); ///< Guess foil name from file/folder name
     void GuessFoilType(); ///< Guesses foil type from guessed name
     void LoadFile(const TString filename, Int_t which_side);
     void CloseFile(Int_t which_side);
     void DrawMaps(TPad * p, Int_t which_side, Int_t which_holetype, Int_t which_histo);
-    //void DrawDensityMaps(TPad * p, Int_t which_side, Int_t which_holetype);
+    void DrawFrame();
     void DrawProfiles(TPad * p, Int_t which_side);
     void Save();
     void SaveTxt();
@@ -127,6 +131,7 @@ public:
     void SaveTxt2D();
     TString GetSaveName();
     void DrawFitResult(Int_t which_side);
+    void DrawOrigoShift(Int_t which_side);
     TString GetFitResult(Int_t which_side, Int_t which_hole);
     TString GetMeanWidth(Int_t which_side, Int_t which_hole);
 
