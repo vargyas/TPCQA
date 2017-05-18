@@ -96,8 +96,9 @@ private:
     Int_t fType;                ///< Type of the foil: 0=IROC, 1=OROC1, 2=OROC2, 3=OROC3, 4=else (not recognised)
     Int_t fLocation;
     TString fInFileName[2];     ///< Input file name
-    TString fDataDir[2];
-    TFile * fInFile[2];
+	TString fDataDir[2];
+	TString fOutDir[2];
+	TFile * fInFile[2];
     TString fName;              ///< Name of the foils as guessed from the directory name
     TTree * fTree[2][2];        ///< Input tree, S/U side, inner and outer
     TH2D * fhMapDiam[2][2];     ///< S/U side, inner and outer hole map histograms
@@ -120,7 +121,7 @@ public:
     void GetOrigoShift(Int_t which_side);
     void GuessFoilName(const TString name); ///< Guess foil name from file/folder name
     void GuessFoilType(); ///< Guesses foil type from guessed name
-    void LoadFile(const TString filename, Int_t which_side);
+	void LoadFile(const TString filename, const TString outputdir, Int_t which_side);
     void CloseFile(Int_t which_side);
     void DrawMaps(TPad * p, Int_t which_side, Int_t which_holetype, Int_t which_histo);
     void DrawFrame();
@@ -130,6 +131,7 @@ public:
     void SaveTxt1D();
     void SaveTxt2D();
     TString GetSaveName();
+	TString GetROOTName(Int_t which_side);
     void DrawFitResult(Int_t which_side);
     void DrawOrigoShift(Int_t which_side);
     TString GetFitResult(Int_t which_side, Int_t which_hole);

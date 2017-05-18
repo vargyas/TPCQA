@@ -235,6 +235,8 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
     help->Resize(40, 40);
     toolbar->AddFrame(help, new TGLayoutHints(kLHintsCenterX));
 
+	fMain->Connect("CloseWindow()", "MOptFrame", this, "CloseWindow()");
+
     // Add frames to main frame
 
     fCF[0]->AddFrame(fEcanvasAll[0], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
@@ -283,7 +285,10 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
     fMain->MapWindow();
     fMain->SetCleanup(kDeepCleanup);
 }
-
+void MOptFrame::CloseWindow()
+{
+   delete this;
+}
 void MOptFrame::Help()
 {
     std::cout << "help is not implemented yet, but this should bring up run table\n";
@@ -297,8 +302,11 @@ void MOptFrame::DoTab(Int_t itab)
 MOptFrame::~MOptFrame()
 {
     // Delete all created widgets.
+    std::cout << "Destroying MOptFrame()...\n";
+    delete fOpt;
     fMain->Cleanup();
-    delete fMain;
+	fMain->DeleteWindow();
+   // delete fMain;
 }
 
 void MOptFrame::DrawMaps(Int_t which_side)
@@ -419,25 +427,30 @@ void MOptFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
 
 void MOptFrame::LoadFile()
 {
-    static  TString dir("~/cernbox/Work/ALICE/serviceWork/OS");
+	// input file directory (with the h5/ROOT files to load)
+	// the pop-up file browser would start from here
+	static TString idir("~/cernbox/Work/ALICE/serviceWork/OS");
+	// output directory for pdf report and processed ROOT files
+	static TString odir("~/");
+
     TGFileInfo fi;
     fi.fFileTypes = filetypes_opt;
-    fi.fIniDir    = StrDup(dir);
+	fi.fIniDir    = StrDup(idir);
     new TGFileDialog(gClient->GetRoot(), fMain, kFDOpen, &fi);
 
     if(fi.fFilename)
     {
         printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
-        dir = fi.fIniDir;
+		idir = fi.fIniDir;
 
         Int_t which_side=-1;
         TString tmpname(fi.fFilename);
 
-        if(tmpname.Contains("-s-") || tmpname.Contains("_S_") || tmpname.Contains("_S-")) {
+        if(tmpname.Contains("s-") || tmpname.Contains("_S_") || tmpname.Contains("_S-")) {
             which_side = kSegmented;
             fLoadedSegmented = true;
         }
-        else if(tmpname.Contains("-u-") || tmpname.Contains("_U_") || tmpname.Contains("_U-")) {
+        else if(tmpname.Contains("u-") || tmpname.Contains("_U_") || tmpname.Contains("_U-")) {
             which_side = kUnsegmented;
             fLoadedUnsegmented = true;
         }
@@ -447,7 +460,7 @@ void MOptFrame::LoadFile()
         }
 
         std::cout << "loading file of side: " << which_side << std::endl;
-        fOpt->LoadFile(fi.fFilename, which_side);
+		fOpt->LoadFile(fi.fFilename, odir, which_side);
 
         DrawFoilNameLabel(false);
 
@@ -493,8 +506,7 @@ void MOptFrame::Print()
     std::cout << "Executing command: " << command << std::endl;
     gROOT->ProcessLine(command);
     // clean up
-    //for(Int_t itab=0;itab<5;++itab)
-        gROOT->ProcessLine( "remove( \"opt*.png\");" );
+	gROOT->ProcessLine( "remove( \"opt*.png\");" );
 
     gROOT->SetBatch(kFALSE);
 }

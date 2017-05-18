@@ -50,6 +50,8 @@ public:
     void Help();
     void Clear();
     void Print();
+	void CloseWindow();
+
 };
 
 #endif // MOPTFRAME_H

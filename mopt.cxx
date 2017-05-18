@@ -27,6 +27,7 @@ MOpt::MOpt(Int_t location)
 //----------------------------------------------------------------------------------
 MOpt::~MOpt() // TODO: delete also histograms/trees
 {
+    std::cout << "\t Deleting MOpt()...\n";
     // destructor
     if(fInFile[0]->IsOpen()) fInFile[0]->Close();
     if(fInFile[1]->IsOpen()) fInFile[1]->Close();
@@ -91,7 +92,7 @@ void MOpt::GuessFoilType()
     }
     else {
         std::cerr << "Foil type not recognized!\n";
-        fType = 4;
+        fType = 0; // temporary fix for prediction IROC's with strange name
     }
     std::cout << "MOpt::Guessed foil type is: " << fType << std::endl;
 
@@ -105,10 +106,11 @@ void MOpt::GuessFoilType()
     //else fLimit = 0.5; // default in nA
 }
 //----------------------------------------------------------------------------------
-void MOpt::LoadFile(const TString filename, Int_t which_side)
+void MOpt::LoadFile(const TString filename, const TString outputdir, Int_t which_side)
 {
     fInFileName[which_side] = filename;
 
+	fOutDir[which_side] = outputdir;
     fDataDir[which_side] = gSystem->pwd();
     GuessFoilName(fDataDir[which_side]);
     GuessFoilType();
@@ -117,11 +119,12 @@ void MOpt::LoadFile(const TString filename, Int_t which_side)
     if( filename.Contains(".h5"))
     {
         // This program creates a ROOT tree from the optical scan's hdf5 file output
-        const TString bash_command = Form(".! python ~/Dropbox/TPCQA/utils/loadHDF5tree.py %s",fDataDir[which_side].Data());
+		const TString bash_command = Form(".! python ~/Dropbox/TPCQA/utils/loadHDF5tree.py %s %s",fDataDir[which_side].Data(),GetROOTName(which_side).Data());
         std::cout << "Processing command:\n" << bash_command << std::endl;
         gROOT->ProcessLine(bash_command);
 
-        fInFileName[which_side] = fDataDir[which_side]+"/outfile.root";
+		//fInFileName[which_side] = fDataDir[which_side]+"/outfile.root";
+		fInFileName[which_side] = GetROOTName(which_side).Data();
     }
 
     fInFile[which_side] = TFile::Open(fInFileName[which_side]);
@@ -370,7 +373,7 @@ void MOpt::DrawMaps(TPad * p, Int_t which_side, Int_t which_hole, Int_t which_hi
 void MOpt::DrawOrigoShift(Int_t which_side)
 {
     GetOrigoShift(which_side);
-    std::cout << "shift is " << fShift[0] << "\t" << fShift[1] << std::endl;
+
     TLine * ls[4];
     ls[0] = new TLine(fShift[0], fhMapN[which_side][0]->GetYaxis()->GetBinCenter(0), fShift[0], fhMapN[which_side][0]->GetYaxis()->GetBinCenter(fhMapN[which_side][0]->GetNbinsY()));
     ls[1] = new TLine(fhMapN[which_side][0]->GetXaxis()->GetBinCenter(0), fShift[1], fhMapN[which_side][0]->GetXaxis()->GetBinCenter(fhMapN[which_side][0]->GetNbinsX()), fShift[1]);
@@ -479,11 +482,13 @@ void MOpt::SaveTxt2D()
     Double_t std_i_u = 0;
     Double_t std_o_u = 0;
 
+    Double_t rim_s = 0;
+    Double_t rim_u = 0;
 
     TString outfilename;
     //for(Int_t iside=0; iside<2; iside++)
     {
-        outfilename = Form("%s/../%s_2D.txt",fDataDir[0].Data(), fName.Data());
+		outfilename = Form("%s/%s_2D.txt",fOutDir[0].Data(), fName.Data());
         std::cout << "Saving map to: " << outfilename << std::endl;
         std::ofstream ofs (outfilename.Data(), std::ofstream::out);
 
@@ -510,6 +515,8 @@ void MOpt::SaveTxt2D()
                 std_i_u = fhMapStd[kUnsegmented][kInner]->GetBinContent(ix, iy);
                 std_o_u = fhMapStd[kUnsegmented][kOuter]->GetBinContent(ix, iy);
 
+                //rim_s = fhMapRim[kSegmented]->GetBinContent(ix, iy);
+                //rim_u = fhMapRim[kUnsegmented]->GetBinContent(ix, iy);
 
                 ofs << x <<"\t"<< y <<"\t"<< d_i_s << "\t" << d_o_s << "\t" << d_i_u << "\t" << d_o_u << "\t"
                                           << n_i_s << "\t" << n_o_s << "\t" << n_i_u << "\t" << n_o_u << "\t"
@@ -525,7 +532,7 @@ void MOpt::SaveTxt2D()
 void MOpt::SaveTxt1D()
 {
     const Int_t N = fhProfDiam[0][0]->GetNbinsX();
-    const TString outfilename = Form("%s/../%s_1D.txt",fDataDir[0].Data(), fName.Data());
+	const TString outfilename = Form("%s/%s_1D.txt",fOutDir[0].Data(), fName.Data());
     std::cout << "Saving profile to: " << outfilename << std::endl;
     std::ofstream ofs (outfilename.Data(), std::ofstream::out);
 
@@ -549,6 +556,13 @@ void MOpt::SaveTxt1D()
 //----------------------------------------------------------------------------------
 TString MOpt::GetSaveName()
 {
-    return Form("%s/../Report_OPT_%s.pdf",fDataDir[0].Data(), fName.Data());
+	return Form("%s/Report_OPT_%s.pdf",fOutDir[0].Data(), fName.Data());
 }
+TString MOpt::GetROOTName(Int_t which_side)
+{
+	if(which_side==0) return Form("%s/%s-s.root",fOutDir[0].Data(), fName.Data());
+	else if (which_side==1) return Form("%s/%s-u.root",fOutDir[1].Data(), fName.Data());
+	else return "outfile.root";
+}
+
 #endif // MOPT_CXX
