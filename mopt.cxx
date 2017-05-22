@@ -29,14 +29,35 @@ MOpt::~MOpt() // TODO: delete also histograms/trees
 {
     std::cout << "\t Deleting MOpt()...\n";
     // destructor
-    if(fInFile[0]->IsOpen()) fInFile[0]->Close();
-    if(fInFile[1]->IsOpen()) fInFile[1]->Close();
+    //if(fInFile[0]->IsOpen()) fInFile[0]->Close();
+    //if(fInFile[1]->IsOpen()) fInFile[1]->Close();
 }
 //----------------------------------------------------------------------------------
-void MOpt::GuessFoilName(const TString name)
+void MOpt::GuessFoilNameRoot(const TString name)
 {
-    fName = name;
+    std::cout << "Guessing foil name from ROOT file\n";
+
+    TString tmpname(name);
+    // remove extension
+    fName = tmpname.ReplaceAll(".root","");
+    // remove absolute path
+    tmpname.Remove(fName.Last('/'));
+    fName.ReplaceAll(tmpname,"");
+    // remove remaining garbage
+    fName.ReplaceAll("/","");
+
+    std::cout << "MOpt::Guessed foil name is: " << fName << std::endl;
+}
+
+//----------------------------------------------------------------------------------
+void MOpt::GuessFoilNameDir(const TString name)
+{
+    std::cout << "Guessing foil name from directory\n";
     TString tmpname = name;
+    cout << tmpname << endl;
+    // first remove results_conv folder
+    tmpname.ReplaceAll("/results_conv4","");
+    fName = tmpname;
 
     // remove absolute part of path
     tmpname.Remove(fName.Last('/'));
@@ -49,6 +70,7 @@ void MOpt::GuessFoilName(const TString name)
         fName.ReplaceAll("-s-1","");
         fName.ReplaceAll("-u-1","");
         fName.ReplaceAll("/","");
+
     }
     // remove helsinki conventions
     if(fLocation == 0)
@@ -112,7 +134,11 @@ void MOpt::LoadFile(const TString filename, const TString outputdir, Int_t which
 
 	fOutDir[which_side] = outputdir;
     fDataDir[which_side] = gSystem->pwd();
-    GuessFoilName(fDataDir[which_side]);
+    if(fInFileName[which_side].Contains(".root"))
+        GuessFoilNameRoot(filename);
+    else
+        GuessFoilNameDir(fDataDir[which_side]);
+
     GuessFoilType();
 
     // If h5 extension is selected, run converter to create ROOT file with TTree
@@ -190,9 +216,9 @@ void MOpt::CreateOutputContainers(Int_t which_side)
     for(Int_t j=0; j<2; j++)
     {
         // might need adjustment -yy[fType]+offset, offset
-        fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapStd[i][j]  = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()),nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),  Form("N %s",holtyp[j].Data()),                nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapDiam[i][j]  = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()),         nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapStd[i][j]   = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapN[i][j]     = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),                nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
     }
     fhProfDiam[i][kInner] = new TH1D(Form("hprof_diam_%d_%d",i,kInner),"",300,0,110);
     fhProfDiam[i][kOuter] = new TH1D(Form("hprof_diam_%d_%d",i,kOuter),"",300,0,110);
@@ -202,6 +228,7 @@ void MOpt::CreateOutputContainers(Int_t which_side)
         fhProfDiam[i][j]->GetXaxis()->SetTitle("diameter [#mum]");
         fhProfDiam[i][j]->GetYaxis()->SetTitle("occurrence");
     }
+    fhMapLight[i] = new TH2D(Form("hmap_fl_%d",i), Form("Foreground light"), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
 
     ffProfFit[i][kInner] = new TF1(Form("inner_fit_%d", which_side),"gaus",0,110);
     ffProfFit[i][kOuter] = new TF1(Form("outer_fit_%d", which_side),"gaus",0,110);
@@ -218,11 +245,17 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fTree[which_side][kInner]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kInner),"","goff");
     fTree[which_side][kOuter]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kOuter),"","goff");
 
+    fTree[which_side][kInner]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_fl_%d",which_side),"fl","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_fl_%d",which_side),"fl","goff");
+
     fhMapDiam[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
     fhMapDiam[which_side][kInner]->GetZaxis()->SetRangeUser(40, 70);
 
     fhMapDiam[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
     fhMapDiam[which_side][kOuter]->GetZaxis()->SetRangeUser(60, 100);
+
+    fhMapLight[which_side]->Divide(fhMapN[which_side][kInner]);
+    fhMapLight[which_side]->GetZaxis()->SetRangeUser(140, 180);
 
     fTree[which_side][kInner]->Draw(Form("d*4.34>>hprof_diam_%d_%d",which_side,kInner),"", "goff");
     fTree[which_side][kOuter]->Draw(Form("d*4.34>>hprof_diam_%d_%d",which_side,kOuter),"", "goff");
@@ -363,6 +396,7 @@ void MOpt::DrawMaps(TPad * p, Int_t which_side, Int_t which_hole, Int_t which_hi
     if(which_histo==1) fhMapStd[which_side][which_hole]->Draw("colz");
     if(which_histo==2) fhMapN[which_side][which_hole]->Draw("colz");
     if(which_histo==3) fhMapRim[which_side]->Draw("colz");
+    if(which_histo==4) fhMapLight[which_side]->Draw("colz");
 
     DrawOrigoShift(which_side);
     DrawFrame();
@@ -558,11 +592,13 @@ TString MOpt::GetSaveName()
 {
 	return Form("%s/Report_OPT_%s.pdf",fOutDir[0].Data(), fName.Data());
 }
+
 TString MOpt::GetROOTName(Int_t which_side)
 {
-	if(which_side==0) return Form("%s/%s-s.root",fOutDir[0].Data(), fName.Data());
-	else if (which_side==1) return Form("%s/%s-u.root",fOutDir[1].Data(), fName.Data());
-	else return "outfile.root";
+    // don't append -s or -u if name contains it already
+    TString side[] = {"-s", "-u"};
+    if(fName.Contains("-s") || fName.Contains("-u")) return Form("%s/%s.root",fOutDir[which_side].Data(), fName.Data());
+    else return Form("%s/%s%s.root",fOutDir[which_side].Data(), fName.Data(),side[which_side].Data());
 }
 
 #endif // MOPT_CXX
