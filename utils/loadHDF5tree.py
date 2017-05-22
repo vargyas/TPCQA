@@ -1,7 +1,7 @@
 #########################################################################
 ###
 ### This macro reads the neural network outputs of the optical scan.
-### Files are stored in HDF5 format, details are in ALICE3.recipe. 
+### Files are stored in HDF5 format, details are in ALICE*.recipe.
 ### It reads them into a ROOT tree and saves them into a ROOT file.
 ###
 ### python loadHDF5tree.py [directory path which contain the hdf5 files]
@@ -36,7 +36,7 @@ def convert_dict_nparray(dictionary, key):
             tmp_array = list()
             for line in dictionary[key]:
                 line = tuple(line)
-                tmp_array.append( (line[0], line[1], line[7], line[19], line[18]) )
+                tmp_array.append( (line[0], line[1], line[7], line[19], line[18], line[24]) )
             
             # create a named list which will be directly
             # converted to a TTree object
@@ -45,7 +45,8 @@ def convert_dict_nparray(dictionary, key):
                         ('y',np.float64),
                         ('d',np.float64),
                         ('a', np.float64),
-                        ('b',np.float64)
+                        ('b',np.float64),
+                        ('fl',np.float64)
                         ] )
             return my_array
         except:
@@ -75,18 +76,22 @@ M A I N   P R O G R A M
 """
 
 # Creating empty container for data (the ugly way)
-data_array_inner = np.array( [(0,0,0,0,0)],
+data_array_inner = np.array( [(0,0,0,0,0,0)],
                     dtype=[('x',np.float64),
                         ('y',np.float64),
                         ('d',np.float64),
                         ('a',np.float64),
-                        ('b',np.float64) ] )
-data_array_outer = np.array( [(0,0,0,0,0)],
+                        ('b',np.float64),
+                        ('fl',np.float64)
+                           ] )
+data_array_outer = np.array( [(0,0,0,0,0,0)],
                     dtype=[('x',np.float64),
                         ('y',np.float64),
                         ('d',np.float64),
                         ('a',np.float64),
-                        ('b',np.float64) ] )
+                        ('b',np.float64),
+                        ('fl', np.float64)
+                          ] )
 
 
 # Loop over the chunks
