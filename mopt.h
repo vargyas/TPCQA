@@ -105,6 +105,7 @@ private:
     TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
     TH2D * fhMapN[2][2];
     TH2D * fhMapRim[2];         ///< S/U side rim map (calculated here)
+    TH2D * fhMapLight[2];       ///< S/U side foreground light map (should be between 140-180)
     TH1D * fhProfDiam[2][3];
     TF1 * ffProfFit[2][3];      ///< Gaussian fit to profile diagrams
     Bool_t fIsLoaded[2];        ///<
@@ -119,7 +120,8 @@ public:
     void CalculateRim(Int_t which_side);
     void CalculateStd(Int_t which_side, Int_t which_hole);
     void GetOrigoShift(Int_t which_side);
-    void GuessFoilName(const TString name); ///< Guess foil name from file/folder name
+    void GuessFoilNameDir(const TString name); ///< Guess foil name from file/folder name
+    void GuessFoilNameRoot(const TString name); ///< Just truncate *.root -> *
     void GuessFoilType(); ///< Guesses foil type from guessed name
 	void LoadFile(const TString filename, const TString outputdir, Int_t which_side);
     void CloseFile(Int_t which_side);
@@ -139,6 +141,8 @@ public:
 
     TString GetInFileName(Int_t i) {return fInFileName[i]; }
     TString GetFoilName() { return fName; }
+    TString GetOutDir(Int_t which_side) { return fOutDir[which_side]; }
+
 };
 
 #endif // MOPT_H
