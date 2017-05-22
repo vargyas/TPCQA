@@ -399,13 +399,13 @@ void MOptFrame::DrawRimMaps(Int_t which_side)
     if(which_side==kSegmented)
     {
         fOpt->DrawMaps(fPad[4][4], kSegmented, kInner, 3);
-        //fOpt->DrawMaps(fPad[5][4], kSegmented, kOuter, 3);
+        fOpt->DrawMaps(fPad[5][4], kSegmented, kInner, 4);
     }
     // draw unsegmented side
     if(which_side==kUnsegmented)
     {
         fOpt->DrawMaps(fPad[6][4], kUnsegmented, kInner, 3);
-        //fOpt->DrawMaps(fPad[7][4], kUnsegmented, kOuter, 3);
+        fOpt->DrawMaps(fPad[7][4], kUnsegmented, kInner, 4);
     }
 }
 void MOptFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
@@ -429,9 +429,10 @@ void MOptFrame::LoadFile()
 {
 	// input file directory (with the h5/ROOT files to load)
 	// the pop-up file browser would start from here
-	static TString idir("~/cernbox/Work/ALICE/serviceWork/OS");
-	// output directory for pdf report and processed ROOT files
-	static TString odir("~/");
+    static TString idir("/media/gridserv/opticalScan/");
+    //static TString idir("~/cernbox/Work/ALICE/serviceWork/OS");
+    // output directory for pdf report and processed ROOT files
+    static TString odir("~/cernbox/Work/ALICE/serviceWork/OS");
 
     TGFileInfo fi;
     fi.fFileTypes = filetypes_opt;
@@ -500,13 +501,14 @@ void MOptFrame::Print()
     for(Int_t itab=0;itab<5;++itab)
     {
         fCanv = fEcanvasAll[itab]->GetCanvas();
-        fCanv->Print(Form("opt%d.png",itab));
+        fCanv->Print(Form("~/opt%d.png",itab));
     }
-    TString command = Form(".! convert opt*.png %s", tmpname.Data());
+    TString command = Form(".! convert ~/opt*.png %s", tmpname.Data());
     std::cout << "Executing command: " << command << std::endl;
     gROOT->ProcessLine(command);
     // clean up
-	gROOT->ProcessLine( "remove( \"opt*.png\");" );
+    //gROOT->ProcessLine( "remove( \"~/opt*.png\");" );
+    gROOT->ProcessLine( ".! rm ~/opt*.png" );
 
     gROOT->SetBatch(kFALSE);
 }
