@@ -16,6 +16,8 @@ MLauncher::MLauncher(const TGWindow *p, UInt_t w, UInt_t h)
     //std::cout << "\t your processor is: " << info << std::endl;
 
     fLaunch = new TGMainFrame(p, w, h);
+    fLaunch->Connect("CloseWindow()", "MLauncher",this,"CloseWindow()");
+
     fToolbar = new TGHorizontalFrame(fLaunch,w,400);
 
     const char * welcomestring = "This is the unified launcher for TPC GEM QA.";
@@ -53,10 +55,14 @@ MLauncher::MLauncher(const TGWindow *p, UInt_t w, UInt_t h)
     // Map main frame
     fLaunch->MapWindow();
 }
+void MLauncher::CloseWindow()
+{
+    gApplication->Terminate();
+}
 
 MLauncher::~MLauncher()
 {
-    //destructor
+    delete this;
 }
 
 void MLauncher::StartLeakage()

@@ -22,6 +22,7 @@ RQ_OBJECT("MLauncher")
     void StartLeakage(); // *SIGNAL*
     void StartOptical(); // *SIGNAL*
     void StartGain(); // *SIGNAL*
+    void CloseWindow();
 };
 
 #endif // MLAUNCHER_H
