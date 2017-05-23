@@ -11,7 +11,7 @@ RQ_OBJECT("MOptFrame")
 private:
     Int_t               fIPlot; ///< Select what to draw on main canvas by clicking on tab (0: map of inner/outer hole diameters, 1: profile plots, 2: std dev map of diameter, 3: density maps, 4: rim map)
     TGTransientFrame    * fMain;
-    TGPictureButton     * load, * clear, * save, * print, * help;
+    TGPictureButton     * loadH5, * loadROOT, * clear, * save, * print, * help;
     TGHorizontalFrame   * toolbar;
     TGStatusBar         * fStatusBar;
     TGTab               * fTab;
@@ -30,7 +30,9 @@ public:
     MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h);
     virtual ~MOptFrame();
 
-    void LoadFile();
+    void LoadFileProto(const TString indir, const char * filetypes[]);
+    void LoadH5File();
+    void LoadROOTFile();
     void DrawFoilNameLabel(Bool_t clear);
     void DoTab(Int_t);
 

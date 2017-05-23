@@ -205,11 +205,17 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
     toolbar = new TGHorizontalFrame(fMain,w,0);
 
     // Create buttons for toolbar: load, execute, save and quit on the bottom of the panel
-    load = new TGPictureButton(toolbar, gClient->GetPicture("ed_open.png")); //fileopen.xpm branch_folder_s.xpm folder_t.xpm
-    load->SetToolTipText ("Open foil leakage current", 400);
-    load->Connect("Clicked()","MOptFrame",this,"LoadFile()");
-    load->Resize(40, 40);
-    toolbar->AddFrame(load, new TGLayoutHints(kLHintsCenterX));
+    loadH5 = new TGPictureButton(toolbar, gClient->GetPicture("ed_open.png")); //fileopen.xpm branch_folder_s.xpm folder_t.xpm
+    loadH5->SetToolTipText ("Open from H5 file", 400);
+    loadH5->Connect("Clicked()","MOptFrame",this,"LoadH5File()");
+    loadH5->Resize(40, 40);
+    toolbar->AddFrame(loadH5, new TGLayoutHints(kLHintsCenterX));
+
+    loadROOT = new TGPictureButton(toolbar, gClient->GetPicture("ed_open.png")); //fileopen.xpm branch_folder_s.xpm folder_t.xpm
+    loadROOT->SetToolTipText ("Open from ROOT file", 400);
+    loadROOT->Connect("Clicked()","MOptFrame",this,"LoadROOTFile()");
+    loadROOT->Resize(40, 40);
+    toolbar->AddFrame(loadROOT, new TGLayoutHints(kLHintsCenterX));
 
     clear = new TGPictureButton(toolbar, gClient->GetPicture("ed_delete.png")); //interrupt.png, mb_stop_s.xpm,
     clear->SetToolTipText ("Clear loaded histograms", 400);
@@ -425,38 +431,62 @@ void MOptFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
    //std::cout << gPad->GetSelected()->GetName() << endl;
 }
 
-void MOptFrame::LoadFile()
+void MOptFrame::LoadH5File()
 {
-	// input file directory (with the h5/ROOT files to load)
+    // input file directory (with the h5 files to load)
 	// the pop-up file browser would start from here
-    static TString idir("/media/gridserv/opticalScan/");
-    //static TString idir("~/cernbox/Work/ALICE/serviceWork/OS");
+    // (better to use absolute path)
+    static TString idirH5("/media/gridserv/opticalScan/");
+
+    const char *filetypes[] = { "HDF5 files",    "*.h5",
+                                    "All files",     "*",
+                                    0,               0 };
+
+    LoadFileProto(idirH5, filetypes);
+}
+void MOptFrame::LoadROOTFile()
+{
+    // input file directory (with the h5 files to load)
+    // the pop-up file browser would start from here
+    // (better to use absolute path)
+    static TString idirROOT("/home/vargyas/cernbox/Work/ALICE/serviceWork/OS");
+
+    const char *filetypes[] = { "ROOT files",    "*.root",
+                                    "All files",     "*",
+                                    0,               0 };
+
+    LoadFileProto(idirROOT, filetypes);
+}
+
+void MOptFrame::LoadFileProto(const TString idir, const char * filetypes[] )
+{
     // output directory for pdf report and processed ROOT files
-    static TString odir("~/cernbox/Work/ALICE/serviceWork/OS");
+    // (better to use absolute path)
+    static TString odir("/home/vargyas/cernbox/Work/ALICE/serviceWork/OS");
 
     TGFileInfo fi;
-    fi.fFileTypes = filetypes_opt;
+    fi.fFileTypes = filetypes;
 	fi.fIniDir    = StrDup(idir);
     new TGFileDialog(gClient->GetRoot(), fMain, kFDOpen, &fi);
 
     if(fi.fFilename)
     {
         printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
-		idir = fi.fIniDir;
+        //idir = fi.fIniDir;
 
         Int_t which_side=-1;
         TString tmpname(fi.fFilename);
 
-        if(tmpname.Contains("s-") || tmpname.Contains("_S_") || tmpname.Contains("_S-")) {
+        if(tmpname.Contains("-s") || tmpname.Contains("_S_") || tmpname.Contains("_S-")) {
             which_side = kSegmented;
             fLoadedSegmented = true;
         }
-        else if(tmpname.Contains("u-") || tmpname.Contains("_U_") || tmpname.Contains("_U-")) {
+        else if(tmpname.Contains("-u") || tmpname.Contains("_U_") || tmpname.Contains("_U-")) {
             which_side = kUnsegmented;
             fLoadedUnsegmented = true;
         }
         else {
-            std::cerr << "Incorrect filename, expected -s-, _S_, _S-, -u-, _U_, _U-. Segmented side is assumed by default...\n";
+            std::cerr << "Incorrect filename, expected -s, _S_, _S-, -u, _U_, _U-. Segmented side is assumed by default...\n";
             which_side = kSegmented;
         }
 
