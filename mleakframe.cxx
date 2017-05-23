@@ -86,6 +86,7 @@ MLeakFrame::MLeakFrame(Int_t location, const TGWindow *p, const TGWindow *main, 
 
     // Create main frame
     fMain = new TGTransientFrame(p,main,w,h);
+    fMain->Connect("CloseWindow()", "MLeakFrame", this, "CloseWindow()");
 
     // Create tabs
     fTab = new TGTab(fMain, 300, 300);
@@ -204,11 +205,22 @@ void MLeakFrame::DoTab(Int_t itab)
 
 MLeakFrame::~MLeakFrame()
 {
+    for(Int_t i=0; i<5; ++i) fEcanvasAll[i]->Clear();
+    //fCanv->Clear();
     fMain->Cleanup();
-    delete fMain;
+    fMain->DeleteWindow();
+    //delete fMain;
     delete fLeak;
 }
 
+////////////////////////////////////////////////////////////////////////
+/// \brief Close window
+/// Called when window is closed, calls destructor
+
+void MLeakFrame::CloseWindow()
+{
+    delete this;
+}
 
 ////////////////////////////////////////////////////////////////////////
 /// \brief MLeakFrame::DrawCurrentStdOverview
@@ -622,7 +634,8 @@ MDialog::MDialog(const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h)
     fMain = new TGTransientFrame(p, main, w, h);
     // use hierarchical cleaning
     fMain->SetCleanup(kDeepCleanup);
-    
+    fMain->Connect("CloseWindow()", "MDialog", this, "CloseWindow()");
+
     fECanvasCh = new TRootEmbeddedCanvas("EcanvasCh",fMain,580,580);
     
     // status bar
@@ -650,3 +663,7 @@ MDialog::~MDialog()
     //delete fStatusBarLocal;
 }
 
+void MDialog::CloseWindow()
+{
+    delete this;
+}

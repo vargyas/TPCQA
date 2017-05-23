@@ -61,6 +61,7 @@ public:
     Int_t ClickedOnPad(Int_t px, Int_t py);
     void EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
     void Save();
+    void CloseWindow();
 };
 
 /// \class MDialog
@@ -87,4 +88,5 @@ public:
     //void DrawCurrentZoom(Int_t foil_id, MLeak * foil);
     void FoilInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
     void Save();
+    void CloseWindow();
 };
