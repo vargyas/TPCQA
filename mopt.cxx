@@ -45,6 +45,8 @@ void MOpt::GuessFoilNameRoot(const TString name)
     fName.ReplaceAll(tmpname,"");
     // remove remaining garbage
     fName.ReplaceAll("/","");
+    fName.ReplaceAll("-s","");
+    fName.ReplaceAll("-u","");
 
     std::cout << "MOpt::Guessed foil name is: " << fName << std::endl;
 }
@@ -54,7 +56,6 @@ void MOpt::GuessFoilNameDir(const TString name)
 {
     std::cout << "Guessing foil name from directory\n";
     TString tmpname = name;
-    cout << tmpname << endl;
     // first remove results_conv folder
     tmpname.ReplaceAll("/results_conv4","");
     fName = tmpname;
@@ -519,48 +520,52 @@ void MOpt::SaveTxt2D()
     Double_t rim_s = 0;
     Double_t rim_u = 0;
 
-    TString outfilename;
-    //for(Int_t iside=0; iside<2; iside++)
+    Double_t foreground_light_s = 0;
+    Double_t foreground_light_u = 0;
+
+    TString outfilename = Form("%s/%s_2D.txt",fOutDir[0].Data(), fName.Data());
+    std::cout << "Saving map to: " << outfilename << std::endl;
+    std::ofstream ofs (outfilename.Data(), std::ofstream::out);
+
+    for(Int_t ix=1; ix<=nx; ix++)
     {
-		outfilename = Form("%s/%s_2D.txt",fOutDir[0].Data(), fName.Data());
-        std::cout << "Saving map to: " << outfilename << std::endl;
-        std::ofstream ofs (outfilename.Data(), std::ofstream::out);
-
-        for(Int_t ix=1; ix<=nx; ix++)
+        for(Int_t iy=1; iy<=ny; iy++)
         {
-            for(Int_t iy=1; iy<=ny; iy++)
-            {
-                //
-                x = fhMapN[0][0]->GetXaxis()->GetBinCenter(ix) - fShift[0];
-                y = fhMapN[0][0]->GetYaxis()->GetBinCenter(iy) - fShift[1];
+            //
+            x = fhMapN[0][0]->GetXaxis()->GetBinCenter(ix) - fShift[0];
+            y = fhMapN[0][0]->GetYaxis()->GetBinCenter(iy) - fShift[1];
 
-                n_i_s = fhMapN[kSegmented][kInner]->GetBinContent(ix, iy);
-                n_o_s = fhMapN[kSegmented][kOuter]->GetBinContent(ix, iy);
-                n_i_u = fhMapN[kUnsegmented][kInner]->GetBinContent(ix, iy);
-                n_o_u = fhMapN[kUnsegmented][kOuter]->GetBinContent(ix, iy);
+            n_i_s = fhMapN[kSegmented][kInner]->GetBinContent(ix, iy);
+            n_o_s = fhMapN[kSegmented][kOuter]->GetBinContent(ix, iy);
+            n_i_u = fhMapN[kUnsegmented][kInner]->GetBinContent(ix, iy);
+            n_o_u = fhMapN[kUnsegmented][kOuter]->GetBinContent(ix, iy);
 
-                d_i_s = fhMapDiam[kSegmented][kInner]->GetBinContent(ix, iy);
-                d_o_s = fhMapDiam[kSegmented][kOuter]->GetBinContent(ix, iy);
-                d_i_u = fhMapDiam[kUnsegmented][kInner]->GetBinContent(ix, iy);
-                d_o_u = fhMapDiam[kUnsegmented][kOuter]->GetBinContent(ix, iy);
+            d_i_s = fhMapDiam[kSegmented][kInner]->GetBinContent(ix, iy);
+            d_o_s = fhMapDiam[kSegmented][kOuter]->GetBinContent(ix, iy);
+            d_i_u = fhMapDiam[kUnsegmented][kInner]->GetBinContent(ix, iy);
+            d_o_u = fhMapDiam[kUnsegmented][kOuter]->GetBinContent(ix, iy);
 
-                std_i_s = fhMapStd[kSegmented][kInner]->GetBinContent(ix, iy);
-                std_o_s = fhMapStd[kSegmented][kOuter]->GetBinContent(ix, iy);
-                std_i_u = fhMapStd[kUnsegmented][kInner]->GetBinContent(ix, iy);
-                std_o_u = fhMapStd[kUnsegmented][kOuter]->GetBinContent(ix, iy);
+            std_i_s = fhMapStd[kSegmented][kInner]->GetBinContent(ix, iy);
+            std_o_s = fhMapStd[kSegmented][kOuter]->GetBinContent(ix, iy);
+            std_i_u = fhMapStd[kUnsegmented][kInner]->GetBinContent(ix, iy);
+            std_o_u = fhMapStd[kUnsegmented][kOuter]->GetBinContent(ix, iy);
 
-                //rim_s = fhMapRim[kSegmented]->GetBinContent(ix, iy);
-                //rim_u = fhMapRim[kUnsegmented]->GetBinContent(ix, iy);
+            foreground_light_s = fhMapLight[kSegmented]->GetBinContent(ix, iy);
+            foreground_light_u = fhMapLight[kUnsegmented]->GetBinContent(ix, iy);
 
-                ofs << x <<"\t"<< y <<"\t"<< d_i_s << "\t" << d_o_s << "\t" << d_i_u << "\t" << d_o_u << "\t"
-                                          << n_i_s << "\t" << n_o_s << "\t" << n_i_u << "\t" << n_o_u << "\t"
-                                          << std_i_s << "\t" << std_o_s << "\t" << std_i_u << "\t" << std_o_u << "\t"
-                                          << std::endl;
-            }
-            ofs << std::endl;
+            //rim_s = fhMapRim[kSegmented]->GetBinContent(ix, iy);
+            //rim_u = fhMapRim[kUnsegmented]->GetBinContent(ix, iy);
+
+            ofs << x <<"\t"<< y <<"\t"<< d_i_s << "\t" << d_o_s << "\t" << d_i_u << "\t" << d_o_u << "\t"
+                                      << n_i_s << "\t" << n_o_s << "\t" << n_i_u << "\t" << n_o_u << "\t"
+                                      << std_i_s << "\t" << std_o_s << "\t" << std_i_u << "\t" << std_o_u << "\t"
+                                      << foreground_light_s << "\t" << foreground_light_u << "\t"
+                                      << std::endl;
         }
-        ofs.close();
+        ofs << std::endl;
     }
+    ofs.close();
+
 }
 
 void MOpt::SaveTxt1D()

@@ -31,6 +31,7 @@
 
 #include "TTreeReader.h"
 #include "TTreeReaderValue.h"
+#include "TTreeReaderArray.h"
 
 #include "TROOT.h"
 #include "TStyle.h"
@@ -82,11 +83,11 @@
 enum sides {kSegmented, kUnsegmented};
 enum holetype {kInner, kOuter, kRim};
 
-const char *filetypes_opt[] = { "ROOT files",    "*.root",
-                                "Text files",    "*.[tT][xX][tT]",
-                                "HDF5 files",    "*.h5",
-                                "All files",     "*",
-                                0,               0 };
+//const char *filetypes_opt[] = { "ROOT files",    "*.root",
+//                                "Text files",    "*.[tT][xX][tT]",
+//                                "HDF5 files",    "*.h5",
+//                                "All files",     "*",
+//                                0,               0 };
 
 class MOpt
 {
