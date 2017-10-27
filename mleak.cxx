@@ -36,6 +36,12 @@ MLeak::MLeak(Int_t location) :
     fhCurrentTime2.SetOwner(kTRUE);
     fhCurrentTime3.SetOwner(kTRUE);
     fhCurrentStd.SetOwner(kTRUE);
+
+    if(fLocation == 0) fSaveDir = "~";
+    if(fLocation == 1) fSaveDir = "~/cernbox/Work/ALICE/serviceWork/HV";
+    else fSaveDir = "~";
+
+    //CreateHLimitStd();
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -43,7 +49,6 @@ MLeak::MLeak(Int_t location) :
 ///
 MLeak::~MLeak()
 {
-
     if(fFlagIsLoaded)
     {
         // delete TList's objects
@@ -54,7 +59,6 @@ MLeak::~MLeak()
         fhCurrentStd.Clear();
 
         delete fInTree;
-
     }
 }
 
@@ -64,7 +68,11 @@ MLeak::~MLeak()
 ///
 TString MLeak::GetSaveName()
 {
-    return Form("%s/Report_HV_%s.pdf",fDataDir.Data(),fName.Data());
+    return Form("%s/Report_HV_%s.pdf",fSaveDir.Data(),fName.Data());
+}
+TString MLeak::GetSaveDir() const
+{
+    return fSaveDir;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -73,14 +81,14 @@ TString MLeak::GetSaveName()
 void MLeak::GuessFoilName()
 {
     fName = fInFileName;
-
+    std::cout << "MLeak::GuessFoilName()..\t" << fInFileName << "\t" << fDataDir << std::endl;
     // remove absolute part of path
     fName.ReplaceAll(fDataDir,"");
 
     fName.ReplaceAll(".txt","");
     fName.ReplaceAll("/","");
 
-    std::cout << "guessed name of foil is: " << fName << std::endl;
+    std::cout << "Guessed name of foil is: " << fName << std::endl;
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -108,7 +116,7 @@ void MLeak::ProcessFileName()
     else {
         std::cerr << "Foil type not recognized!\n";
         fType = 4;
-        fNumChannels = 18;
+        fNumChannels = 24;
     }
 
     // determine subtype: protection resistors differ for different foils,
@@ -125,14 +133,15 @@ void MLeak::ProcessFileName()
 /// \brief Loads foil current file and fills the appropriate containers
 /// \param filename
 ///
-void MLeak::LoadFoilCurrents(const TString filename)
+void MLeak::LoadFoilCurrents(const TString dirname, const TString filename)
 {   
     std::cout << "MLeak::LoadFoilCurrents()\n";
 
     // setting the file name and determine the foil type from that
     fInFileName = filename;
     ProcessFileName();
-    fDataDir = gSystem->pwd();
+    //fDataDir = gSystem->pwd();
+    fDataDir = dirname;
     GuessFoilName();
 
     // not yet processed, setting flag
@@ -146,7 +155,6 @@ void MLeak::LoadFoilCurrents(const TString filename)
         fhCurrentTime1.Clear();
         fhCurrentTime2.Clear();
         fhCurrentTime3.Clear();
-        delete fInTree;
     }
 
     std::cout << "read input tree\n";
@@ -175,6 +183,9 @@ void MLeak::LoadFoilCurrents(const TString filename)
     // divide 3 regions (first 10 minutes, middle, last 10 minutes)
     const Long64_t itimes1=600, itimes2=ndata-2*600, itimes3=600;
 
+    // easier to create graphs first, then convert them to histograms
+    TGraph * g[4][24];
+
     for (Int_t ich = 0; ich<24; ich++)
     {
         fInTree->SetBranchAddress(Form("I_%.2d",ich), &currentsD[ich]);
@@ -183,16 +194,15 @@ void MLeak::LoadFoilCurrents(const TString filename)
         ((TH1D*)fhCurrentStd.At(ich))->SetYTitle("");
         SetAxisStyle(((TH1D*)fhCurrentStd.At(ich)));
 
-        fhCurrentTime.Add( new TGraph(ndata) );
-        fhCurrentTime1.Add( new TGraph(itimes1 ));
-        fhCurrentTime2.Add( new TGraph(itimes2 ));
-        fhCurrentTime3.Add( new TGraph(itimes3 ));
+        g[0][ich] = new TGraph(ndata);
+        g[1][ich] = new TGraph(itimes1);
+        g[2][ich] = new TGraph(itimes2);
+        g[3][ich] = new TGraph(itimes3);
 
-        ((TGraph*)fhCurrentTime.At(ich))->SetTitle("");
-        ((TGraph*)fhCurrentTime1.At(ich))->SetTitle("");
-        ((TGraph*)fhCurrentTime2.At(ich))->SetTitle("");
-        ((TGraph*)fhCurrentTime3.At(ich))->SetTitle("");
-
+        for(Int_t i=0; i<4; ++i) {
+            g[i][ich]->SetTitle("");
+            g[i][ich]->SetName(Form("gCurrentTime%d_CH%d",i,ich));
+        }
     }
 
     Long64_t it1=0, it2=0, it3=0;
@@ -201,34 +211,59 @@ void MLeak::LoadFoilCurrents(const TString filename)
     Double_t times_shift = 0;
     std::cout << "ndata = " << ndata << std::endl;
 
-    for (Int_t ich = 0; ich<fNumChannels; ich++)
+    for (Int_t ich = 0; ich<24; ich++) // load all, channels might be corrupted and skipped
     {
         it1=0; it2=0; it3=0;
 
-        for( Long64_t idata=0; idata<ndata; idata++)
+        for( Long64_t idata=1; idata<ndata; idata++) // ignore first line (not evenly spaced)
         {
             fInTree->GetEvent(idata);
             times_shift = timesD-time0;
 
             ((TH1D*)fhCurrentStd.At(ich))->Fill(currentsD[ich]);
-            ((TGraph*)fhCurrentTime.At(ich))->SetPoint(idata,times_shift, currentsD[ich]);
+            g[0][ich]->SetPoint(idata,times_shift, currentsD[ich]);
 
             // Only fill detailed graphs if enough data
             if(ndata>1400)
             {
                 if(times_shift<600.)
-                    ((TGraph*)fhCurrentTime1.At(ich))->SetPoint(it1++, times_shift, currentsD[ich]);
+                    g[1][ich]->SetPoint(it1++, times_shift, currentsD[ich]);
                 if(times_shift>600. && times_shift<(ndata-600.))
-                    ((TGraph*)fhCurrentTime2.At(ich))->SetPoint(it2++, times_shift, currentsD[ich]);
+                    g[2][ich]->SetPoint(it2++, times_shift, currentsD[ich]);
                 if(times_shift>(ndata-600.))
-                    ((TGraph*)fhCurrentTime3.At(ich))->SetPoint(it3++, times_shift, currentsD[ich]);
+                    g[3][ich]->SetPoint(it3++, times_shift, currentsD[ich]);
+            }
+            // Fill with 0s otherwise
+            else
+            {
+                std::cerr << "not enough data, filling detailed time histograms with zeros\n";
+                g[1][ich]->SetPoint(it1++, times_shift, 0);
+                g[2][ich]->SetPoint(it2++, times_shift, 0);
+                g[3][ich]->SetPoint(it3++, times_shift, 0);
             }
         }
+
+        fhCurrentTime.Add(  (TH1D*)ConstructHist(g[0][ich]) );
+        fhCurrentTime1.Add( (TH1D*)ConstructHist(g[1][ich]) );
+        fhCurrentTime2.Add( (TH1D*)ConstructHist(g[2][ich]) );
+        fhCurrentTime3.Add( (TH1D*)ConstructHist(g[3][ich]) );
+
+        ((TH1D*)fhCurrentTime.At(ich))->GetXaxis()->SetTimeDisplay(1);
+        ((TH1D*)fhCurrentTime1.At(ich))->GetXaxis()->SetTimeDisplay(1);
+        ((TH1D*)fhCurrentTime2.At(ich))->GetXaxis()->SetTimeDisplay(1);
+        ((TH1D*)fhCurrentTime3.At(ich))->GetXaxis()->SetTimeDisplay(1);
+
+        ((TH1D*)fhCurrentTime.At(ich))->GetXaxis()->SetTimeFormat("%H:%M");
+        ((TH1D*)fhCurrentTime1.At(ich))->GetXaxis()->SetTimeFormat("%H:%M");
+        ((TH1D*)fhCurrentTime2.At(ich))->GetXaxis()->SetTimeFormat("%H:%M");
+        ((TH1D*)fhCurrentTime3.At(ich))->GetXaxis()->SetTimeFormat("%H:%M");
+
+        // cleaning up
+        // for(Int_t i=0; i<3; ++i) delete g[i][ich];
     }
-    // ((TH1D*)fhCurrentStd.At(2))->Print();
-    // std::cout << ndata << "\t" << it1 << "\t" << it2 << "\t" << it3 << "\t" << "1307180 " << std::endl;
 
     fFlagIsLoaded = kTRUE;
+    //gROOT->ProcessLine(Form(".! say \"loadin foil %s done.\" ",fName.Data()));
 }
 //----------------------------------------------------------------------------------
 void MLeak::ProcessFoilCurrents()
@@ -240,14 +275,14 @@ void MLeak::ProcessFoilCurrents()
     }
     
     // estimating saturation current
-    for (Int_t ich = 0; ich < fNumChannels; ++ich)
+    for (Int_t ich = 0; ich < 24; ++ich)
     {
         fSatCurrent.push_back( ((TH1D*)fhCurrentStd.At(ich))->GetMean() );
     }
     // TODO: fit saturation current
 
     // determine foil quality
-    for (Int_t ich = 0; ich < fNumChannels; ++ich)
+    for (Int_t ich = 0; ich < 24; ++ich)
     {
         if(fabs(fSatCurrent.at(ich))>=fLimit) fFlagQuality.push_back(0);        // bad foil
         else if(fabs(fSatCurrent.at(ich))<fLimit ) fFlagQuality.push_back(1);   // good foil
@@ -266,11 +301,11 @@ Double_t GetMax(Double_t * array, int narray)
     return xmax;
 }
 
-
+Int_t MLeak::GetLocation() const {return fLocation;}
 //---------------------------------------------------------------------------------- 
-int MLeak::GetNC() { return fNumChannels; }
+Int_t MLeak::GetNC() { return fNumChannels; }
 //----------------------------------------------------------------------------------
-int MLeak::GetType() { return fType; }
+Int_t MLeak::GetType() { return fType; }
 //----------------------------------------------------------------------------------
 Bool_t MLeak::GetProcessedStatus() const { return fFlagIsProcessed; }
 //----------------------------------------------------------------------------------
@@ -410,28 +445,28 @@ void MLeak::DrawLimitTime()
 void MLeak::DrawCurrentTime(Int_t itab, Int_t ich, TPad * p, Bool_t drawaxes)
 {
     gStyle->SetOptStat(0);
-    TGraph * g;
+    TH1D * h;
     switch(itab)
     {
-        case 1: g = ((TGraph*)fhCurrentTime.At(ich)); break;
-        case 2: g = ((TGraph*)fhCurrentTime1.At(ich)); break;
-        case 3: g = ((TGraph*)fhCurrentTime2.At(ich)); break;
-        case 4: g = ((TGraph*)fhCurrentTime3.At(ich)); break;
-        default: g = ((TGraph*)fhCurrentTime.At(ich)); break;
+        case 1: h = ((TH1D*)fhCurrentTime.At(ich)); break;
+        case 2: h = ((TH1D*)fhCurrentTime1.At(ich)); break;
+        case 3: h = ((TH1D*)fhCurrentTime2.At(ich)); break;
+        case 4: h = ((TH1D*)fhCurrentTime3.At(ich)); break;
+        default: h = ((TH1D*)fhCurrentTime.At(ich)); break;
     }
-    g->SetLineColor( GetProcessedColor(ich) );
+    h->SetLineColor( GetProcessedColor(ich) );
 
     if(drawaxes)
     {
-        SetAxisStyle(g);
-        g->GetXaxis()->CenterTitle();
-        g->GetYaxis()->CenterTitle();
-        g->GetXaxis()->SetTitle("time [sec]");
-        g->GetYaxis()->SetTitle("Leakage current [nA]");
+        SetAxisStyle(h);
+        h->GetXaxis()->CenterTitle();
+        h->GetYaxis()->CenterTitle();
+        h->GetXaxis()->SetTitle("time [hour:min]");
+        h->GetYaxis()->SetTitle("Leakage current [nA]");
     }
 
-    g->Draw("AL");
-    if(itab==1 || itab==3) g->GetYaxis()->SetRangeUser(-2.*fLimit,2.*fLimit); // overview and measurement
+    h->Draw("L");
+    if(itab==1 || itab==3) h->GetYaxis()->SetRangeUser(-2.*fLimit,2.*fLimit); // overview and measurement
     //if(itab==2 || itab==4) g->GetYaxis()->SetRangeUser(-2.*fLimit,2.*fLimit); // measurement start / end
 
     if(GetProcessedStatus())
