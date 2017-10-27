@@ -205,7 +205,7 @@ void MLeakFrame::DoTab(Int_t itab)
 
 MLeakFrame::~MLeakFrame()
 {
-    for(Int_t i=0; i<5; ++i) fEcanvasAll[i]->Clear();
+    //for(Int_t i=0; i<5; ++i) fEcanvasAll[i]->Clear();
     //fCanv->Clear();
     fMain->Cleanup();
     fMain->DeleteWindow();
@@ -222,6 +222,17 @@ void MLeakFrame::CloseWindow()
     delete this;
 }
 
+Int_t MLeakFrame::MinCH()
+{
+    if(fLeak->GetLocation()==1) return 1;
+    else return 0;
+}
+Int_t MLeakFrame::MaxCH()
+{
+    if(fLeak->GetLocation()==1) return fLeak->GetNC()+1;
+    else return fLeak->GetNC();
+}
+
 ////////////////////////////////////////////////////////////////////////
 /// \brief MLeakFrame::DrawCurrentStdOverview
 ///
@@ -233,9 +244,10 @@ void MLeakFrame::DrawCurrentStdOverview()
     fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->cd();
 
-    for(int ich=0; ich<fLeak->GetNC(); ich++)
+    int ipad=1;
+    for(int ich=MinCH(); ich<MaxCH(); ich++)
     {
-        fPad[2][0]->cd(ich+1);
+        fPad[2][0]->cd(ipad++);
         fLeak->DrawCurrentStd(ich, fPad[2][0], false);
     }
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
@@ -253,9 +265,10 @@ void MLeakFrame::DrawCurrentTimeOverview()
     fCanv = fEcanvasAll[1]->GetCanvas();
     fCanv->cd();
 
-    for(int ich=0; ich<fLeak->GetNC(); ich++)
+    int ipad=1;
+    for(int ich=MinCH(); ich<MaxCH(); ich++)
     {
-        fPad[2][1]->cd(ich+1);
+        fPad[2][1]->cd(ipad++);
         fLeak->DrawCurrentTime(999, ich, fPad[2][1], false);
     }
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
@@ -272,9 +285,10 @@ void MLeakFrame::DrawCurrentTimeOverviewZoom(Int_t itab)
     fCanv = fEcanvasAll[itab]->GetCanvas();
     fCanv->cd();
 
-    for(int ich=0; ich<fLeak->GetNC(); ich++)
+    int ipad=1;
+    for(int ich=MinCH(); ich<MaxCH(); ich++)
     {
-        fPad[2][itab]->cd(ich+1);
+        fPad[2][itab]->cd(ipad++);
         fLeak->DrawCurrentTime(itab, ich, fPad[2][itab], false);
     }
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MLeakFrame",this,
@@ -348,7 +362,8 @@ Int_t MLeakFrame::ClickedOnPad(Int_t px, Int_t py)
     // check if clicked on empty pad
     if(ret > nch || ret < 0) ret = -1;
     
-    return ret;
+    if(fLeak->GetLocation()==1) return ret+1;
+    else return ret;
 }
 
 // returns middle of pad (px,py) for a given channel ich
@@ -385,7 +400,8 @@ void MLeakFrame::ClickOnPad(Int_t ich, Int_t &px, Int_t &py)
 
 void MLeakFrame::LoadCurrentFile()
 {   
-    static TString dir("~/cernbox/Work/ALICE/serviceWork");
+    //static TString dir("~/cernbox/Work/ALICE/serviceWork");
+    static TString dir("/media/gridserv/HV");
     TGFileInfo fi;
     fi.fFileTypes = filetypes_leak;
     fi.fIniDir    = StrDup(dir);
@@ -395,7 +411,7 @@ void MLeakFrame::LoadCurrentFile()
     {    
         printf("Open file: %s (dir: %s)\n", fi.fFilename, fi.fIniDir);
         dir = fi.fIniDir;
-        fLeak->LoadFoilCurrents(fi.fFilename);
+        fLeak->LoadFoilCurrents(fi.fIniDir, fi.fFilename);
 
         CreateDividedPad();
 
@@ -479,6 +495,11 @@ void MLeakFrame::ZoomFoilPrint(Int_t foil_id, Int_t itab, TString filename)
     delete c;
 }
 
+TString MLeakFrame::GetSaveName(Int_t iplot)
+{
+    return Form("%s/Report%.3d.png",fLeak->GetSaveDir().Data(),iplot);
+}
+
 void MLeakFrame::Save()
 {
     gROOT->SetBatch(kTRUE);
@@ -493,44 +514,44 @@ void MLeakFrame::Save()
 
     // save std.dev overview
     fCanv = fEcanvasAll[0]->GetCanvas();
-    fCanv->Print(Form("Report%.3d.png",iplot++));
+    fCanv->Print(GetSaveName(iplot++));
 
-    for(Int_t ich = 0; ich<N; ich++)
-    {
-        ZoomFoilPrint(ich, 0, Form("Report%.3d.png",iplot++));
-    }
     // save current overview
     fCanv = fEcanvasAll[1]->GetCanvas();
-    fCanv->Print(Form("Report%.3d.png",iplot++));
+    fCanv->Print(GetSaveName(iplot++));
     fCanv = fEcanvasAll[2]->GetCanvas();
-    fCanv->Print(Form("Report%.3d.png",iplot++));
+    fCanv->Print(GetSaveName(iplot++));
     fCanv = fEcanvasAll[3]->GetCanvas();
-    fCanv->Print(Form("Report%.3d.png",iplot++));
+    fCanv->Print(GetSaveName(iplot++));
     fCanv = fEcanvasAll[4]->GetCanvas();
-    fCanv->Print(Form("Report%.3d.png",iplot++));
+    fCanv->Print(GetSaveName(iplot++));
 
-    for(Int_t ich = 0; ich<N; ich++)
+    for(Int_t ich = MinCH(); ich<MaxCH(); ich++)
     {
-        ZoomFoilPrint(ich, 1, Form("Report%.3d.png",iplot++)); // save all time
-        ZoomFoilPrint(ich, 2, Form("Report%.3d.png",iplot++)); // save measurement start
-        ZoomFoilPrint(ich, 3, Form("Report%.3d.png",iplot++)); // save measurement
-        ZoomFoilPrint(ich, 4, Form("Report%.3d.png",iplot++)); // save measurement stop
+        ZoomFoilPrint(ich, 0, GetSaveName(iplot++)); // save all std
+        ZoomFoilPrint(ich, 1, GetSaveName(iplot++)); // save all time
+        ZoomFoilPrint(ich, 2, GetSaveName(iplot++)); // save measurement start
+        ZoomFoilPrint(ich, 3, GetSaveName(iplot++)); // save measurement
+        ZoomFoilPrint(ich, 4, GetSaveName(iplot++)); // save measurement stop
     }
 
 
     gROOT->SetBatch(kFALSE);
 
     // merge to report and clean up intermediate files
-    TString command = Form(".! convert *.png %s",fLeak->GetSaveName().Data());
+    TString command = Form(".! convert %s/*.png %s",fLeak->GetSaveDir().Data(), fLeak->GetSaveName().Data());
     std::cout << "Executing command: " << command << std::endl;
     gROOT->ProcessLine(command);
     // clean up
     for(Int_t i=0; i<iplot; i++)
-        gROOT->ProcessLine( Form("remove( \"Report%.3d.png\");",i) );
+        gROOT->ProcessLine( Form(".! rm %s",GetSaveName(i).Data()) );
+        //gROOT->ProcessLine( Form("remove( \"Report%.3d.png\");",i) );
 
     // Print LaTeX table of saturation currents:
+    std::cout << std::endl;
     for(Int_t ich = 0; ich<N; ich++)
         std::cout << Form("%.4f \t",fLeak->GetSaturationCurrent(ich));
+    std::cout << std::endl;
 
 }
 /*
