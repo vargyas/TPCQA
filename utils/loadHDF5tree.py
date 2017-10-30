@@ -9,129 +9,69 @@
 ###
 ### Author: Vargyas, Marton
 ### Email: mvargyas@cern.ch
-### 2016
+### 2017
 #########################################################################
 
-import numpy as np
-import h5py
-from ROOT import *
+from ROOT import TFile, TTree
 import tables, os, glob
 import sys
+from array import array
 
-from root_numpy import root2array, tree2array
-from root_numpy import array2tree, array2root
-from root_numpy.testdata import get_filepath
+# Loop over the chunks
+print( '=========================')
+ifile = 0
+datadir = sys.argv[1]
 
+outname = "~/outfile.root"
+if len(sys.argv) > 2:
+    outname = sys.argv[2]
+outFile = TFile(os.path.join(datadir,outname), 'RECREATE')
+outFile = TFile(outname, 'RECREATE')
+outFile.cd()
 
-def convert_dict_nparray(dictionary, key):
-    """
-    Convert dictionary to named numpy array
-    which will be converted into a TTree
-    (names are according to ALICE3.recipe,
-    with whitespaces replaced by "_")
-    """
-    while dictionary.has_key(key):
-        try:
-            # convert np.ndarray (2D) into a list of tuples
-            tmp_array = list()
-            for line in dictionary[key]:
-                line = tuple(line)
-                tmp_array.append( (line[0], line[1], line[7], line[19], line[18], line[24]) )
-            
-            # create a named list which will be directly
-            # converted to a TTree object
-            my_array = np.array( tmp_array, 
-                    dtype=[('x',np.float64),
-                        ('y',np.float64),
-                        ('d',np.float64),
-                        ('a', np.float64),
-                        ('b',np.float64),
-                        ('fl',np.float64)
-                        ] )
-            return my_array
-        except:
-            print 'not valid key'
-            return -1
+# Generate trees
+treenames = ["blocked", "defect", "etching", "inner", "outer"]
+tree = []
+_x = array("d", [0])
+_y = array("d", [0])
+_d = array("d", [0])
+_a = array("d", [0])
+_b = array("d", [0])
+_fl = array("d", [0])
 
+for it in range(len(treenames)):
+    tree.append(TTree(treenames[it]+"_tree", ""))    
+    tree[it].Branch('x', _x, 'x/D')
+    tree[it].Branch('y', _y, 'y/D')
+    tree[it].Branch('d', _d, 'd/D')
+    tree[it].Branch('a', _a, 'a/D')
+    tree[it].Branch('b', _b, 'b/D')
+    tree[it].Branch('fl', _fl, 'fl/D')          
+      
+for ifilename in glob.iglob('{}/*.h5'.format(datadir)):
+    ifile += 1
+    print 'load file:', ifile,'/',len(glob.glob('{}/*.h5'.format(datadir))), ':', ifilename
+    h5file = tables.open_file(ifilename, mode='r')
 
-
-def load_HDF5file_dict(infilename):
-    """
-    Load HDF5 files into dictionary
-    """
-    h5file = tables.open_file(infilename, mode='r')
     data={} 
     for idx, group in enumerate(h5file.walk_groups()):
         if idx>0:
             flavour=group._v_name
-            # only load inner and outer identifiers
-            if flavour=='inner' or flavour=='outer':
-                data[flavour]=group.data.read()
+            data[flavour]=group.data.read()
+            x = data[flavour][:,0]
+            y = data[flavour][:,1]
+            d = data[flavour][:,7]
+            a = data[flavour][:,19]
+            b = data[flavour][:,18]
+            fl = data[flavour][:,24]
+            for i in range(len(x)): # all have the same dimension
+                _x[0]=x[i]; _y[0]=y[i]; _d[0]=d[i]
+                _a[0]=a[i]; _b[0]=b[i]; _fl[0]=fl[i]
+                tree[idx-1].Fill()
     h5file.close()
-    return data
 
-
-"""
-M A I N   P R O G R A M
-"""
-
-# Creating empty container for data (the ugly way)
-data_array_inner = np.array( [(0,0,0,0,0,0)],
-                    dtype=[('x',np.float64),
-                        ('y',np.float64),
-                        ('d',np.float64),
-                        ('a',np.float64),
-                        ('b',np.float64),
-                        ('fl',np.float64)
-                           ] )
-data_array_outer = np.array( [(0,0,0,0,0,0)],
-                    dtype=[('x',np.float64),
-                        ('y',np.float64),
-                        ('d',np.float64),
-                        ('a',np.float64),
-                        ('b',np.float64),
-                        ('fl', np.float64)
-                          ] )
-
-
-# Loop over the chunks
-print '========================='
-ifile = 0
-datadir = sys.argv[1]
-outname = "outfile.root"
-if len(sys.argv) > 2:
-    outname = sys.argv[2]
-
-for ifilename in glob.iglob('{}/*.h5'.format(datadir)):
-    ifile += 1
-    print 'load file:', ifile,'/',len(glob.glob('{}/*.h5'.format(datadir))), ':', ifilename
-    # load HDF5 into a python dictionary
-    data_dict = load_HDF5file_dict(ifilename)
-    # convert that to named (structured) numpy array
-    data_array_tmp_inner = convert_dict_nparray(data_dict, 'inner')
-    data_array_tmp_outer = convert_dict_nparray(data_dict, 'outer')
-
-    # merge that with the empty container defined outside of the loop
-    data_array_inner = np.concatenate( (data_array_tmp_inner, data_array_inner), axis=0 )
-    data_array_outer = np.concatenate( (data_array_tmp_outer, data_array_outer), axis=0 )
-
-
-    print '========================='
-
-
-# create a tree from the array
-print '\ncreate a tree from the array'
-treeInner = array2tree(data_array_inner, name='inner_tree')
-treeOuter = array2tree(data_array_outer, name='outer_tree')
-
-print 'writing file to:', outname
-outFile = TFile(os.path.join(datadir,outname), 'RECREATE')
-outFile.cd()
-
-treeInner.Write()
-treeOuter.Write()
+print( '=========================')
+for it in tree:
+    it.Write()
 
 outFile.Write()
-outFile.Close()
-
-
