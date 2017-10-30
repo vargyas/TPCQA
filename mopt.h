@@ -36,6 +36,7 @@
 #include "TROOT.h"
 #include "TStyle.h"
 #include "TEnv.h"
+#include "TRef.h"
 
 #include "RQ_OBJECT.h"      // use this for linux
 //#include "RQ_Object.h"            // use this for mac and win
@@ -81,7 +82,7 @@
 #include <TFrame.h>
 
 enum sides {kSegmented, kUnsegmented};
-enum holetype {kInner, kOuter, kRim};
+enum holetype {kInner, kOuter, kBlocked, kDefect, kEtching, kRim};
 
 //const char *filetypes_opt[] = { "ROOT files",    "*.root",
 //                                "Text files",    "*.[tT][xX][tT]",
@@ -101,15 +102,16 @@ private:
 	TString fOutDir[2];
 	TFile * fInFile[2];
     TString fName;              ///< Name of the foils as guessed from the directory name
-    TTree * fTree[2][2];        ///< Input tree, S/U side, inner and outer
-    TH2D * fhMapDiam[2][2];     ///< S/U side, inner and outer hole map histograms
+    TTree * fTree[2][5];        ///< Input tree, S/U side, inner and outer and defects
+    TH2D * fhMapDiam[2][5];     ///< S/U side, inner and outer hole map histograms
     TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
-    TH2D * fhMapN[2][2];
+    TH2D * fhMapN[2][5];
     TH2D * fhMapRim[2];         ///< S/U side rim map (calculated here)
     TH2D * fhMapLight[2];       ///< S/U side foreground light map (should be between 140-180)
     TH1D * fhProfDiam[2][3];
     TF1 * ffProfFit[2][3];      ///< Gaussian fit to profile diagrams
     Bool_t fIsLoaded[2];        ///<
+    Bool_t fHasError;           ///< True if HDF5 file has error trees (defect, blocked, etching)
     Double_t fConv;             ///< Conversion from pixel value to millimeter.
     Double_t fShift[2];         ///< Vector to shift the middle of foil to (0, 0)
 
@@ -143,6 +145,7 @@ public:
     TString GetInFileName(Int_t i) {return fInFileName[i]; }
     TString GetFoilName() { return fName; }
     TString GetOutDir(Int_t which_side) { return fOutDir[which_side]; }
+    Bool_t GetHasError() {return fHasError;}
 
 };
 

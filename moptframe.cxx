@@ -11,6 +11,11 @@ void MOptFrame::AdjustMapPad(TPad * pad)
     pad->SetLeftMargin(0.15);pad->SetRightMargin(0.1);pad->SetTopMargin(0.075);pad->SetBottomMargin(0.15);
     pad->Range(0,0,100,100);
 }
+void MOptFrame::AdjustErrorMapPad(TPad * pad)
+{
+    pad->SetLeftMargin(0.05);pad->SetRightMargin(0.05);pad->SetTopMargin(0.075);pad->SetBottomMargin(0.15);
+    pad->Range(0,0,100,100);
+}
 void MOptFrame::CreateDividedPad2(Int_t itab)
 {
     fXleft = 0.1;
@@ -131,6 +136,75 @@ void MOptFrame::CreateDividedPad4(Int_t itab)
     fCanv->Update();
 }
 
+void MOptFrame::CreateDividedPad6(Int_t itab)
+{
+    fXleft = 0.1;
+    fXright = 0.002;
+    fYbottom = 0.002;
+    fYtop = 0.2;
+    Double_t middle_x_1 = fXleft + (1.- fXleft - fXright)/3.;
+    Double_t middle_x_2 = fXleft + 2.*(1.- fXleft - fXright)/3.;
+    Double_t middle_y = fYbottom + (1.- fYtop - fYbottom)/2.;
+
+    TPaveLabel * sides[2][5];
+
+    fCanv = fEcanvasAll[itab]->GetCanvas();
+    fCanv->cd();
+
+    // create border tabs
+    fPad[0][itab] = new TPad(Form("Pad_%d_%d",0,itab), "", 0.0, 0.0, 1.0, fYbottom); // bottom
+    AdjustPad(fPad[0][itab]);
+    fPad[1][itab] = new TPad(Form("Pad_%d_%d",1,itab), "", 0.0, fYbottom, fXleft, 1.0-fYtop); // left
+    AdjustPad(fPad[1][itab]);
+    fPad[2][itab] = new TPad(Form("Pad_%d_%d",2,itab), "", 1.0-fXright, fYbottom, 1.0, 1.0-fYtop); // right
+    AdjustPad(fPad[2][itab]);
+    fPad[3][itab] = new TPad(Form("Pad_%d_%d",3,itab), "", 0.0, 1.0-fYtop, 1.0, 1); // top
+    AdjustPad(fPad[3][itab]);
+
+    // create data tabs
+    fPad[4][itab] = new TPad(Form("Pad_%d_%d",4,itab), "", fXleft, middle_y, middle_x_1, 1.0-fYtop); // top left
+    AdjustErrorMapPad(fPad[4][itab]);
+    fPad[5][itab] = new TPad(Form("Pad_%d_%d",5,itab), "", middle_x_1, middle_y, middle_x_2, 1.0-fYtop); // top middle
+    AdjustErrorMapPad(fPad[5][itab]);
+    fPad[6][itab] = new TPad(Form("Pad_%d_%d",6,itab), "", middle_x_2, middle_y, 1-fXright, 1.0-fYtop); // top right
+    AdjustErrorMapPad(fPad[6][itab]);
+
+    fPad[7][itab] = new TPad(Form("Pad_%d_%d",7,itab), "", fXleft, fYbottom, middle_x_1, middle_y); // bottom left
+    AdjustErrorMapPad(fPad[7][itab]);
+    fPad[8][itab] = new TPad(Form("Pad_%d_%d",8,itab), "", middle_x_1, fYbottom, middle_x_2, middle_y); // bottom middle
+    AdjustErrorMapPad(fPad[8][itab]);
+    fPad[9][itab] = new TPad(Form("Pad_%d_%d",9,itab), "", middle_x_2, fYbottom, 1-fXright, middle_y); // bottom right
+    AdjustErrorMapPad(fPad[9][itab]);
+
+    // Add segmented/unsegmented label
+    sides[0][itab] = new TPaveLabel(0.0, 0.0, 100, 50, "Unsegmented");
+    sides[0][itab]->SetBorderSize(0); sides[0][itab]->SetFillColor(kWhite);
+    sides[0][itab]->SetTextSize(40./(fPad[1][itab]->GetBBox().fHeight));
+    sides[0][itab]->SetTextAngle(90);
+    sides[0][itab]->SetTextFont(42);
+
+    sides[1][itab] = new TPaveLabel(0.0, 50, 100, 100, "Segmented");
+    sides[1][itab]->SetBorderSize(0); sides[1][itab]->SetFillColor(kWhite);
+    sides[1][itab]->SetTextSize(40./(fPad[1][itab]->GetBBox().fHeight));
+    sides[1][itab]->SetTextAngle(90);
+    sides[1][itab]->SetTextFont(42);
+
+    for(Int_t i=0; i<10; i++)
+    {
+        fCanv->cd();
+        fPad[i][itab]->Draw();
+        fPad[i][itab]->cd();
+        if(i==1)
+        {
+            sides[0][itab]->Draw();
+            sides[1][itab]->Draw();
+        }
+    }
+    fCanv->Modified();
+    fCanv->Update();
+}
+
+
 void MOptFrame::DrawFoilNameLabel(Bool_t clear)
 {
     TPaveLabel * lname;
@@ -141,7 +215,7 @@ void MOptFrame::DrawFoilNameLabel(Bool_t clear)
     lname->SetTextSize(30./(fPad[3][0]->GetBBox().fHeight));
     lname->SetTextFont(42);
 
-    for(Int_t itab=0; itab<5; itab++)
+    for(Int_t itab=0; itab<6; itab++)
     {
         fCanv = fEcanvasAll[itab]->GetCanvas();
         fCanv->cd(); fPad[3][itab]->cd();
@@ -169,30 +243,35 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
 
     TGCompositeFrame *tf;
 
-    tf= fTab->AddTab("d MAP");
+    tf= fTab->AddTab("d map");
     fCF[0] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
     fEcanvasAll[0] = new TRootEmbeddedCanvas("EcanvasAllopt0",fCF[0],w-20,h-120);
     tf->AddFrame(fCF[0], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-    tf = fTab->AddTab("d PROFILE");
+    tf = fTab->AddTab("d prof.");
     fCF[1] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
     fEcanvasAll[1] = new TRootEmbeddedCanvas("EcanvasAllopt1",fCF[1],w-20,h-120);
     tf->AddFrame(fCF[1], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-    tf = fTab->AddTab("std(d) MAP");
+    tf = fTab->AddTab("std(d) map");
     fCF[2] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
     fEcanvasAll[2] = new TRootEmbeddedCanvas("EcanvasAllopt2",fCF[2],w-20,h-120);
     tf->AddFrame(fCF[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-    tf= fTab->AddTab("n MAP");
+    tf= fTab->AddTab("n map");
     fCF[3] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
     fEcanvasAll[3] = new TRootEmbeddedCanvas("EcanvasAllopt3",fCF[3],w-20,h-120);
     tf->AddFrame(fCF[3], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
-    tf= fTab->AddTab("rim MAP");
+    tf= fTab->AddTab("rim map");
     fCF[4] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
     fEcanvasAll[4] = new TRootEmbeddedCanvas("EcanvasAllopt3",fCF[4],w-20,h-120);
     tf->AddFrame(fCF[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+
+    tf= fTab->AddTab("error map");
+    fCF[5] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
+    fEcanvasAll[5] = new TRootEmbeddedCanvas("EcanvasAllopt3",fCF[5],w-20,h-120);
+    tf->AddFrame(fCF[5], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
     // status bar
     fStatusBar = new TGStatusBar(fMain, 60, 10, kVerticalFrame);
@@ -250,6 +329,7 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
     fCF[2]->AddFrame(fEcanvasAll[2], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
     fCF[3]->AddFrame(fEcanvasAll[3], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
     fCF[4]->AddFrame(fEcanvasAll[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
+    fCF[5]->AddFrame(fEcanvasAll[5], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
     fMain->AddFrame(fTab, new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
@@ -257,13 +337,12 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
 
     fMain->AddFrame(toolbar, new TGLayoutHints(kLHintsCenterX | kLHintsBottom ));
 
-
-
     CreateDividedPad4(0);
     CreateDividedPad2(1);
     CreateDividedPad4(2);
     CreateDividedPad4(3);
     CreateDividedPad4(4);
+    CreateDividedPad6(5);
 
     fCanv = fEcanvasAll[0]->GetCanvas();
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MOptFrame",this,
@@ -278,6 +357,9 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MOptFrame",this,
                                    "EventInfo(Int_t,Int_t,Int_t,TObject*)");
     fCanv = fEcanvasAll[4]->GetCanvas();
+    fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MOptFrame",this,
+                                   "EventInfo(Int_t,Int_t,Int_t,TObject*)");
+    fCanv = fEcanvasAll[5]->GetCanvas();
     fCanv->Connect("ProcessedEvent(Int_t,Int_t,Int_t,TObject*)","MOptFrame",this,
                                    "EventInfo(Int_t,Int_t,Int_t,TObject*)");
 
@@ -414,6 +496,28 @@ void MOptFrame::DrawRimMaps(Int_t which_side)
         fOpt->DrawMaps(fPad[7][4], kUnsegmented, kInner, 4);
     }
 }
+void MOptFrame::DrawErrorMaps(Int_t which_side)
+{
+    gStyle->SetOptStat(0);
+
+    fCanv = fEcanvasAll[5]->GetCanvas();
+    fCanv->cd();
+    // draw segmented side
+    if(which_side==kSegmented)
+    {
+        fOpt->DrawMaps(fPad[4][5], kSegmented, kDefect, 2);
+        fOpt->DrawMaps(fPad[5][5], kSegmented, kBlocked, 2);
+        fOpt->DrawMaps(fPad[6][5], kSegmented, kEtching, 2);
+    }
+    // draw unsegmented side
+    if(which_side==kUnsegmented)
+    {
+        fOpt->DrawMaps(fPad[7][5], kUnsegmented, kDefect, 2);
+        fOpt->DrawMaps(fPad[8][5], kUnsegmented, kBlocked, 2);
+        fOpt->DrawMaps(fPad[9][5], kUnsegmented, kEtching, 2);
+    }
+}
+
 void MOptFrame::EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected)
 {
 // Writes the event status in the status bar parts
@@ -500,6 +604,7 @@ void MOptFrame::LoadFileProto(const TString idir, const char * filetypes[] )
         DrawStdMaps(which_side);
         DrawDensityMaps(which_side);
         DrawRimMaps(which_side);
+        DrawErrorMaps(which_side);
     }
 }
 
@@ -528,11 +633,12 @@ void MOptFrame::Print()
     */
 
     // maps are too big, saving to png first, then merge to pdf
-    for(Int_t itab=0;itab<5;++itab)
+    for(Int_t itab=0;itab<6;++itab)
     {
         fCanv = fEcanvasAll[itab]->GetCanvas();
         fCanv->Print(Form("~/opt%d.png",itab));
     }
+
     TString command = Form(".! convert ~/opt*.png %s", tmpname.Data());
     std::cout << "Executing command: " << command << std::endl;
     gROOT->ProcessLine(command);
