@@ -62,6 +62,11 @@ public:
     void EventInfo(Int_t event, Int_t px, Int_t py, TObject * selected);
     void Save();
     void CloseWindow();
+
+    Int_t MinCH();  ///< Returns minimum channel to be drawn. In Budapest, CH0 and CH23 are not connected, one should omit those.
+    Int_t MaxCH();  ///< Returns minimum channel to be drawn. In Budapest, CH0 and CH23 are not connected, one should omit those.
+    TString GetSaveName(Int_t iplot);
+
 };
 
 /// \class MDialog

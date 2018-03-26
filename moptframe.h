@@ -30,6 +30,7 @@ public:
     MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UInt_t w, UInt_t h);
     virtual ~MOptFrame();
 
+    void LoadFileProtoScript(const TString infilename);
     void LoadFileProto(const TString indir, const char * filetypes[]);
     void LoadH5File();
     void LoadROOTFile();

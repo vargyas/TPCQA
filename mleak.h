@@ -23,6 +23,9 @@
 #include "TVirtualFitter.h"
 #include "TFile.h"
 #include "TTree.h"
+#include "TTreeReader.h"
+#include "TTreeReaderValue.h"
+#include "TTreeReaderArray.h"
 #include "TParameter.h"
 #include "TString.h"
 
@@ -123,6 +126,38 @@ Double_t AverageHist(TH1D * h)
     }
     return val / Double_t(n);
 }
+////////////////////////////////////////////////////////////////////////
+/// \brief Constructs TH1D from TGraph with evenly spaced bins
+/// \param g TGraph to copy
+/// \return h TH1D
+///
+TH1D * ConstructHist(TGraph * g)
+{
+
+    Double_t xmin = g->GetXaxis()->GetXmin();
+    Double_t xmax = g->GetXaxis()->GetXmax();
+    Int_t nbins = Int_t(xmax-xmin);
+    Int_t ngraph = g->GetN();
+
+    //std::cout << xmin << "\t" << xmax << std::endl;
+    Double_t bw = 1.; // bin width is 1 second
+
+    TString name = Form("hist_%s",g->GetName());
+
+    TH1D * h = new TH1D(name, "", nbins, xmin-bw/2., xmax+bw/2.);
+
+    Double_t x, y;
+
+    for(Int_t ib=0; ib<ngraph; ++ib)
+    {
+        g->GetPoint(ib, x, y);
+        Int_t bin = h->FindBin(x);
+        //if(ib<20) std::cout << x << "\t" << h->GetBinCenter(ib+1) << std::endl;
+        h->SetBinContent(bin, y);
+    }
+    return h;
+}
+
 //----------------------------------------------------------------------------------
 // find x-limits (first and last non-zero bins)
 Double_t * GetXlimits(TH1D * h)
@@ -183,6 +218,7 @@ private:
     TString fName;                      ///< Name of the foil 
     TString fInFileName;                ///< Name of the input file of the leakage current(s)
     TString fDataDir;                   ///< Name of input file's folder
+    TString fSaveDir;                   ///< Name of output folder
 
     Bool_t fFlagIsProcessed;            ///< Status of processing of the foil, true if done, false if not
     Bool_t fFlagIsLoaded;               ///< True if is loaded already, false if it is the first load of the datafile 
@@ -193,10 +229,10 @@ private:
     Double_t fMeasurementStart;         ///< Start of measurement, after ramping is finished, determined by DetectMeasurementStart()
     Double_t fMeasurementEnd;           ///< End of measurement, determined by DetectMeasurementStop()
     Double_t fLimit;                    ///< Acceptance leakage current limit in nA
-    TList fhCurrentTime;                ///< List of time-dependent leakage current graphs
-    TList fhCurrentTime1;               ///< List of time-dependent leakage current graphs
-    TList fhCurrentTime2;               ///< List of time-dependent leakage current graphs
-    TList fhCurrentTime3;               ///< List of time-dependent leakage current graphs
+    TList fhCurrentTime;                ///< List of time-dependent leakage current histograms
+    TList fhCurrentTime1;               ///< List of time-dependent leakage current histograms
+    TList fhCurrentTime2;               ///< List of time-dependent leakage current histograms
+    TList fhCurrentTime3;               ///< List of time-dependent leakage current histograms
     TList fhCurrentStd;                 ///< List of leakage current distribution histograms
 
     std::vector<Double_t> fSatCurrent;  ///< Saturation current in nA
@@ -209,19 +245,22 @@ public:
     MLeak(Int_t location);              ///< Default constructor
     virtual ~MLeak();                   ///< Default destructor
 
-    void LoadFoilCurrents(const TString infilename);    ///< Loads foil information from file selected by mouse and displays it
+    void LoadFoilCurrents(const TString dirname, const TString infilename);    ///< Loads foil information from file selected by mouse and displays it
     void ProcessFoilCurrents();         ///< Processes the measured foil current(s) and evaulates the foil
     void GuessFoilName();
     TString GetSaveName();
     
     Int_t GetNC();                      ///< Returns number of channels (fNumChannels)
     Int_t GetType();                    ///< Returns type of foil (fType)
+
+    Int_t GetLocation() const;
     Bool_t GetProcessedStatus() const;
     Bool_t GetLoadedStatus() const;
     TString GetInfoSatCurrent(Int_t id) const;
     TString GetInfoLimitCurrent() const;
     TString GetInFileName() const;
     TString GetName() const;
+    TString GetSaveDir() const;
 
     void CreateHLimitTime(); ///<
     void CreateHLimitStd(Int_t ich, Double_t ymax); ///<

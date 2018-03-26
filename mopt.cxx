@@ -17,7 +17,7 @@ bool FileExists(char* filename)
 MOpt::MOpt(Int_t location)
 {
     fLocation = location;
-    fConv = 4.34/1000.; // conversion from pixel to millimeter
+    fConv = 4.4/1000.; // conversion from pixel to millimeter
     fHasError = kFALSE;
     for(Int_t i=0; i<2; i++)
     {
@@ -30,8 +30,8 @@ MOpt::~MOpt() // TODO: delete also histograms/trees
 {
     std::cout << "\t Deleting MOpt()...\n";
     // destructor
-    //if(fInFile[0]->IsOpen()) fInFile[0]->Close();
-    //if(fInFile[1]->IsOpen()) fInFile[1]->Close();
+    if(fInFile[0]->IsOpen()) fInFile[0]->Close();
+    if(fInFile[1]->IsOpen()) fInFile[1]->Close();
 }
 //----------------------------------------------------------------------------------
 void MOpt::GuessFoilNameRoot(const TString name)

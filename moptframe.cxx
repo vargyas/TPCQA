@@ -265,12 +265,12 @@ MOptFrame::MOptFrame(Int_t location, const TGWindow *p, const TGWindow *main, UI
 
     tf= fTab->AddTab("rim map");
     fCF[4] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
-    fEcanvasAll[4] = new TRootEmbeddedCanvas("EcanvasAllopt3",fCF[4],w-20,h-120);
+    fEcanvasAll[4] = new TRootEmbeddedCanvas("EcanvasAllopt4",fCF[4],w-20,h-120);
     tf->AddFrame(fCF[4], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
     tf= fTab->AddTab("error map");
     fCF[5] = new TGCompositeFrame(tf, 60, 20, kHorizontalFrame);
-    fEcanvasAll[5] = new TRootEmbeddedCanvas("EcanvasAllopt3",fCF[5],w-20,h-120);
+    fEcanvasAll[5] = new TRootEmbeddedCanvas("EcanvasAllopt5",fCF[5],w-20,h-120);
     tf->AddFrame(fCF[5], new TGLayoutHints(kLHintsExpandX | kLHintsExpandY));
 
     // status bar
@@ -607,6 +607,42 @@ void MOptFrame::LoadFileProto(const TString idir, const char * filetypes[] )
         DrawErrorMaps(which_side);
     }
 }
+
+
+void MOptFrame::LoadFileProtoScript(const TString infilename)
+{
+    // output directory for pdf report and processed ROOT files
+    // (better to use absolute path)
+    static TString odir("/home/vargyas/cernbox/Work/ALICE/serviceWork/OS");
+    Int_t which_side=-1;
+
+    if(infilename.Contains("-s") || infilename.Contains("_S_") || infilename.Contains("_S-")) {
+        which_side = kSegmented;
+        fLoadedSegmented = true;
+    }
+    else if(infilename.Contains("-u") || infilename.Contains("_U_") || infilename.Contains("_U-")) {
+        which_side = kUnsegmented;
+        fLoadedUnsegmented = true;
+    }
+    else {
+        std::cerr << "Incorrect filename, expected -s, _S_, _S-, -u, _U_, _U-. Segmented side is assumed by default...\n";
+        which_side = kSegmented;
+    }
+
+    std::cout << "loading file of side: " << which_side << std::endl;
+    std::cout << "Possible sides: " << kSegmented << "\t" << kUnsegmented << std::endl;
+    fOpt->LoadFile(infilename, odir, which_side);
+
+    DrawFoilNameLabel(false);
+
+    DrawMaps(which_side);
+    DrawProfiles(which_side);
+    DrawStdMaps(which_side);
+    DrawDensityMaps(which_side);
+    DrawRimMaps(which_side);
+    DrawErrorMaps(which_side);
+}
+
 
 void MOptFrame::Save()
 {
