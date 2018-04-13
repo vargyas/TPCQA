@@ -44,29 +44,29 @@ def findADCIndex(x):
 
 colors = [601, 634, 417, 433, 635, 619, 603, 636, 719, 435]
 
-def processMap(inputFileName):
+def processMap(inputFileName, subpedestal=True):
     """
     - find mean and average value in each (x,y) point by Gaussian fit
     - plots the results
     - save fit parameters in the map to a tree
     """
-
-    # get pedestal mean values from their distribution
-    treePedestal = TTree("pedestal_tree","")
-    treePedestal.ReadFile(inputFileName.replace('PREMAP','PEDESTAL'),"adc0:adc1:adc2:adc3")
-
     h = [0, 0, 0, 0]
     adc_pedestal = [0, 0, 0, 0]
-    for i in range(4):
-        h[i] = TH1D("h{}".format(i),"",38,2700,3004)
-        treePedestal.Draw("adc{}>>h{}".format(i,i),"","goff")
-        adc_pedestal[i] = h[i].GetMean()
-
-    adc_pedestal_print = np.array(adc_pedestal)
     np.set_printoptions(precision=1)
-    print inputFileName, adc_pedestal_print
-    #print 'but they are reset, hahaha'
-    #adc_pedestal = [2792, 2780, 2801, 2790]
+
+    # get pedestal mean values from their distribution
+    if subpedestal:
+        print "Pedestal subtraction enabled"
+        treePedestal = TTree("pedestal_tree","")
+        treePedestal.ReadFile(inputFileName.replace('PREMAP','PEDESTAL'),"adc0:adc1:adc2:adc3")
+
+        for i in range(4):
+            h[i] = TH1D("h{}".format(i),"",38,2700,3004)
+            treePedestal.Draw("adc{}>>h{}".format(i,i),"","goff")
+            adc_pedestal[i] = h[i].GetMean()
+
+        adc_pedestal_print = np.array(adc_pedestal)
+        print inputFileName, adc_pedestal_print
 
 
     # control whether to plot Gaussian fits
@@ -104,7 +104,7 @@ def processMap(inputFileName):
             adcc.append(iadc - adc_pedestal[which_adc])
 
 
-        if len(adcc) > 2:
+        if len(adcc) > 10:
 
             mu = np.median(adcc)
             std= np.std(adcc)
@@ -121,7 +121,7 @@ def processMap(inputFileName):
 
 
 
-            if len(adcf_sliced) > 2:
+            if len(adcf_sliced) > 10:
                 # Fit a normal distribution to the data:
                 mu, std = norm.fit(adcf_sliced)
                 chi2 = chisquare(adcf_sliced)
@@ -149,11 +149,10 @@ def processMap(inputFileName):
                 # mu=mu*(1+mu*mu/A/A)
 
                 fit_array_tmp[ic] = (x, y, mu, std, nraw, npeak, chi2[0], chi2[1])
-
-                if x>56 and x<65 and y==100:
-                    if plotFitProcess:
+                
+                if plotFitProcess:
+                    if x>56 and x<65 and y==100:                    
                         plt.clf()
-
                         count, bins, ignored = plt.hist(adcf_sliced, 30, normed=True)
                         plt.plot(bins, 1/(std * np.sqrt(2 * np.pi)) * np.exp( - (bins - mu)**2 / (2 * std**2) ), linewidth=2, color='r')
                         #p = norm.pdf(plot_x, mu, std)
@@ -174,15 +173,15 @@ def processMap(inputFileName):
                                 ('y', np.int),
                                 ('mean', np.float64),
                                 ('sigma', np.float64),
-                                ('nraw', np.float64),
-                                ('npeak', np.float64),
+                                ('nraw', np.int),
+                                ('npeak', np.int),
                                 ('chi2',np.float64),
                                 ('pvalue',np.float64)
                                 ])
 
     outputFileName = inputFileName.replace('PREMAP.txt', 'MAP.txt')
     print 'saving to text file:', outputFileName
-    np.savetxt(outputFileName, fit_array,'%.0f')
+    np.savetxt(outputFileName, fit_array,'%.2f')
 
     outputFileName = outputFileName.replace(".txt",".root")
     treeGain = array2tree(fit_array, name='gain_tree')
@@ -191,7 +190,7 @@ def processMap(inputFileName):
     outFile.cd()
 
 
-    treePedestal.Write()
+    if subpedestal: treePedestal.Write()
     treeGain.Write()
     outFile.Write()
     outFile.Close()
