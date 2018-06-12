@@ -118,15 +118,6 @@ void MOpt::GuessFoilType()
         fType = 0; // temporary fix for prediction IROC's with strange name
     }
     std::cout << "MOpt::Guessed foil type is: " << fType << std::endl;
-
-    // determine subtype: protection resistors differ for different foils,
-    // setting the accepted limit accordingly
-    //if (fInFileName.Contains("_G1_") || fInFileName.Contains("_G2_") || fInFileName.Contains("_G3_") ||
-    //    fInFileName.Contains("-G1-") || fInFileName.Contains("-G2-") || fInFileName.Contains("-G3-") )
-    //    fLimit = 0.160; // nA
-    //else if (fInFileName.Contains("_G4_"))
-    //    fLimit = 0.046; // nA
-    //else fLimit = 0.5; // default in nA
 }
 //----------------------------------------------------------------------------------
 void MOpt::LoadFile(const TString filename, const TString outputdir, Int_t which_side)
@@ -217,22 +208,24 @@ void MOpt::CreateOutputContainers(Int_t which_side)
 
     // correction to increase above sizes
     // (nbins will grow accordingly, keeping the distance ratio)
-    Double_t corrx=0.05;
-    Double_t corry=0.05;
+    // set to zero because I think it is not needed, but keeping the compatibility
+    Double_t corrx=0.00;
+    Double_t corry=0.00;
 
     Int_t nx[5], ny[5];
     for(Int_t i=0; i<5; ++i) {
         //xx[i]=xx[i]*corrx;
         //yy[i]=yy[i]*corry;
-        nx[i] = xx[i]*(1+corrx)/xstep;
-        ny[i] = yy[i]*(1+corry)/ystep;
+        nx[i] = int(xx[i]*(1+corrx)/xstep);
+        ny[i] = int(yy[i]*(1+corry)/ystep);
     }
 
     for(Int_t j=0; j<5; j++)
     {
         // might need adjustment -yy[fType]+offset, offset
-        fhMapDiam[i][j]  = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapN[i][j]     = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapEcc[i][j]  = new TH2D(Form("hmap_ecc_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
     }
     for(Int_t j=0; j<2; j++)
         fhMapStd[i][j]   = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
@@ -259,8 +252,12 @@ void MOpt::FillOutputContainers(Int_t which_side)
     if(fHasError) {
 
         fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kBlocked),"d*4.4","goff");
-        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kDefect),"d*4.4","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kDefect),  "d*4.4","goff");
         fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kEtching),"d*4.4","goff");
+
+        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kBlocked),"(1-b/a)*4.4","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kDefect),  "(1-b/a)*4.4","goff");
+        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kEtching),"(1-b/a)*4.4","goff");
 
         fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kBlocked),"","goff");
         fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kDefect),"","goff");
@@ -276,6 +273,9 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kInner),"d*4.4","goff");
     fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kOuter),"d*4.4","goff");
 
+    fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kInner),"(1-b/a)*4.4","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kOuter),"(1-b/a)*4.4","goff");
+
     fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kInner),"","goff");
     fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kOuter),"","goff");
 
@@ -286,6 +286,10 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fhMapDiam[which_side][kInner]->GetZaxis()->SetRangeUser(40, 70);
     fhMapDiam[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
     fhMapDiam[which_side][kOuter]->GetZaxis()->SetRangeUser(60, 100);
+    fhMapEcc[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
+    fhMapEcc[which_side][kInner]->GetZaxis()->SetRangeUser(-1, 1);
+    fhMapEcc[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
+    fhMapEcc[which_side][kOuter]->GetZaxis()->SetRangeUser(-1, 1);
 
     fhMapLight[which_side]->Divide(fhMapN[which_side][kInner]);
     fhMapLight[which_side]->GetZaxis()->SetRangeUser(140, 180);
@@ -301,7 +305,6 @@ void MOpt::FillOutputContainers(Int_t which_side)
     CalculateStd(which_side, kOuter);
 
     CalculateRim(which_side);
-
 }
 //----------------------------------------------------------------------------------
 void MOpt::CalculateRim(Int_t which_side)
@@ -358,7 +361,6 @@ void MOpt::CalculateStd(Int_t which_side, Int_t which_hole)
     fhMapStd[which_side][which_hole]->GetZaxis()->SetRangeUser(0,4);
 }
 //----------------------------------------------------------------------------------
-
 void MOpt::GetOrigoShift(Int_t which_side)
 {
     // Finding the middle of the foil, that would be the vector
@@ -376,7 +378,6 @@ void MOpt::GetOrigoShift(Int_t which_side)
     Double_t stop = hy->GetBinCenter(stopBin);
     fShift[1] = (stop+start)/2.;
 }
-
 //----------------------------------------------------------------------------------
 TString MOpt::GetFitResult(Int_t which_side, Int_t which_hole)
 {
@@ -389,7 +390,6 @@ TString MOpt::GetMeanWidth(Int_t which_side, Int_t which_hole)
     // note that GetRMS() returns the standard deviation
     return Form("d = %.1f #pm %.1f #mum", fhProfDiam[which_side][which_hole]->GetMean(), fhProfDiam[which_side][which_hole]->GetRMS() );
 }
-
 //----------------------------------------------------------------------------------
 void MOpt::DrawFitResult(Int_t which_side)
 {
@@ -417,7 +417,6 @@ void MOpt::DrawFitResult(Int_t which_side)
     tinfo->Draw();
 
 }
-
 //----------------------------------------------------------------------------------
 void MOpt::DrawMaps(TPad * p, Int_t which_side, Int_t which_hole, Int_t which_histo)
 {
@@ -434,7 +433,7 @@ void MOpt::DrawMaps(TPad * p, Int_t which_side, Int_t which_hole, Int_t which_hi
     }
     if(which_histo==3) fhMapRim[which_side]->Draw("colz");
     if(which_histo==4) fhMapLight[which_side]->Draw("colz");
-
+    if(which_histo==5) fhMapEcc[which_side][which_hole]->Draw("colz");
 
     DrawOrigoShift(which_side);
     DrawFrame();
@@ -458,7 +457,6 @@ void MOpt::DrawOrigoShift(Int_t which_side)
 
 void MOpt::DrawFrame()
 {
-
     // blueprint sizes in mm with the copper area included
     // iroc,  oroc1, oroc2, oroc3, unrecognised (largest is chosen)
     Double_t xl_bp[] = {467.0, 595.8, 726.2, 867.0, 867.0};
@@ -482,7 +480,6 @@ void MOpt::DrawFrame()
 
     for(Int_t i=0;i<4;++i) lf[i]->Draw();
 }
-
 //----------------------------------------------------------------------------------
 /*void MOpt::DrawProfiles(TPad * p, Int_t which_side, Int_t which_hole)
 {
@@ -621,7 +618,6 @@ void MOpt::SaveTxt2D()
 
 }
 //----------------------------------------------------------------------------------
-
 void MOpt::SaveTxt1D()
 {
     const Int_t N = fhProfDiam[0][0]->GetNbinsX();
@@ -645,14 +641,12 @@ void MOpt::SaveTxt1D()
     }
     ofs.close();
 }
-
 //----------------------------------------------------------------------------------
 TString MOpt::GetSaveName()
 {
 	return Form("%s/Report_OPT_%s.pdf",fOutDir[0].Data(), fName.Data());
 }
 //----------------------------------------------------------------------------------
-
 TString MOpt::GetROOTName(Int_t which_side)
 {
     // don't append -s or -u if name contains it already

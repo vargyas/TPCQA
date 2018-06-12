@@ -104,7 +104,7 @@ private:
     TString fName;              ///< Name of the foils as guessed from the directory name
     TTree * fTree[2][5];        ///< Input tree, S/U side, inner and outer and defects
     TH2D * fhMapDiam[2][5];     ///< S/U side, inner and outer hole map histograms
-    //TH2D * fhMapEcc[2][5];      ///< S/U side, inner and outer eccentricity map histograms
+    TH2D * fhMapEcc[2][5];      ///< S/U side, inner and outer eccentricity map histograms
     TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
     TH2D * fhMapN[2][5];
     TH2D * fhMapRim[2];         ///< S/U side rim map (calculated here)
