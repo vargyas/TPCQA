@@ -270,7 +270,7 @@ void MOptFrame::DrawFoilNameLabel(Bool_t clear)
     lname->SetTextSize(30./(fPad[3][0]->GetBBox().fHeight));
     lname->SetTextFont(42);
 
-    for(Int_t itab=0; itab<6; itab++)
+    for(Int_t itab=0; itab<7; itab++)
     {
         fCanv[itab]->cd(); fPad[3][itab]->cd();
         lname->Draw();
@@ -491,14 +491,14 @@ void MOptFrame::DrawEccMaps(Int_t which_side)
     // draw segmented side
     if(which_side==kSegmented)
     {
-        fOpt->DrawMaps(fPad[4][6], kSegmented, kInner, 6);
-        fOpt->DrawMaps(fPad[5][6], kSegmented, kOuter, 6);
+        fOpt->DrawMaps(fPad[4][6], kSegmented, kInner, 5);
+        fOpt->DrawMaps(fPad[5][6], kSegmented, kOuter, 5);
     }
     // draw unsegmented side
     if(which_side==kUnsegmented)
     {
-        fOpt->DrawMaps(fPad[6][6], kUnsegmented, kInner, 6);
-        fOpt->DrawMaps(fPad[7][6], kUnsegmented, kOuter, 6);
+        fOpt->DrawMaps(fPad[6][6], kUnsegmented, kInner, 5);
+        fOpt->DrawMaps(fPad[7][6], kUnsegmented, kOuter, 5);
     }
 }
 //---------------------------------------------------------------------------
