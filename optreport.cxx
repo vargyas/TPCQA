@@ -326,7 +326,7 @@ void MOptFrame::Print()
     std::cout << "Saving report to: " << tmpname << std::endl;
 
     // maps are too big, saving to png first, then merge to pdf
-    for(Int_t itab=0;itab<6;++itab)
+    for(Int_t itab=0;itab<7;++itab)
     {
         fCanv[itab]->Print(Form("~/opt%d.png",itab));
     }
