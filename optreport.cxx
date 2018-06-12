@@ -26,8 +26,8 @@ private:
 
 protected:
     MOpt                * fOpt;
-    TCanvas             * fCanv[6];
-    TPad                * fPad[10][6]; ///< max. 10 pads make space for labels, on 6 tabs
+    TCanvas             * fCanv[7];
+    TPad                * fPad[10][7]; ///< max. 10 pads make space for labels, on 7 tabs
 
 public:
     MOptFrame(Int_t location, UInt_t w, UInt_t h);
@@ -48,6 +48,7 @@ public:
     void DrawDensityMaps(Int_t which_side);
     void DrawRimMaps(Int_t which_side);
     void DrawErrorMaps(Int_t which_side);
+    void DrawEccMaps(Int_t which_side);
 
     void Save();
     void Print();
@@ -309,6 +310,7 @@ void MOptFrame::LoadFileProtoScript(const TString infilename)
     DrawDensityMaps(which_side);
     DrawRimMaps(which_side);
     DrawErrorMaps(which_side);
+    DrawEccMaps(which_side);
 }
 //---------------------------------------------------------------------------
 void MOptFrame::Save()
@@ -352,6 +354,7 @@ MOptFrame::MOptFrame(Int_t location, UInt_t w, UInt_t h)
     CreateDividedPad4(3);
     CreateDividedPad4(4);
     CreateDividedPad6(5);
+    CreateDividedPad4(6);
 }
 //---------------------------------------------------------------------------
 MOptFrame::~MOptFrame()
@@ -477,6 +480,25 @@ void MOptFrame::DrawErrorMaps(Int_t which_side)
         fOpt->DrawMaps(fPad[7][5], kUnsegmented, kDefect, 2);
         fOpt->DrawMaps(fPad[8][5], kUnsegmented, kBlocked, 2);
         fOpt->DrawMaps(fPad[9][5], kUnsegmented, kEtching, 2);
+    }
+}
+//---------------------------------------------------------------------------
+void MOptFrame::DrawEccMaps(Int_t which_side)
+{
+    gStyle->SetOptStat(0);
+
+    fCanv[6]->cd();
+    // draw segmented side
+    if(which_side==kSegmented)
+    {
+        fOpt->DrawMaps(fPad[4][6], kSegmented, kInner, 6);
+        fOpt->DrawMaps(fPad[5][6], kSegmented, kOuter, 6);
+    }
+    // draw unsegmented side
+    if(which_side==kUnsegmented)
+    {
+        fOpt->DrawMaps(fPad[6][6], kUnsegmented, kInner, 6);
+        fOpt->DrawMaps(fPad[7][6], kUnsegmented, kOuter, 6);
     }
 }
 //---------------------------------------------------------------------------
