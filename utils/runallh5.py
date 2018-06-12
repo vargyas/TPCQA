@@ -1,5 +1,5 @@
 import os
-#import time
+import time
 
 def GuessFoilName(name, method):
     fName = name
@@ -30,7 +30,7 @@ fOutDir = datadir+method;
 # determine which was processed with optical recognition
 for idir in dirs:
     # select in which are we interested in
-    if 'I-' in idir or 'O2-' in idir:
+    if 'I-' in idir or 'O2-' in idir or 'O3-' in idir:
         subdirs = os.listdir(scandir+idir)
         for isubdir in subdirs:
             if isubdir == method: 
@@ -53,6 +53,7 @@ for idir in dir_all:
 
 print(dir_proc)
 print("{} folders will be converted".format(len(dir_proc)))
+time.sleep(20)
 
 count = 1
 ROOTNames = []

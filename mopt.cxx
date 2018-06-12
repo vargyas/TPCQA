@@ -51,7 +51,6 @@ void MOpt::GuessFoilNameRoot(const TString name)
 
     std::cout << "MOpt::Guessed foil name is: " << fName << std::endl;
 }
-
 //----------------------------------------------------------------------------------
 void MOpt::GuessFoilNameDir(const TString name)
 {
@@ -93,7 +92,7 @@ void MOpt::GuessFoilNameDir(const TString name)
     }
     std::cout << "MOpt::Guessed foil name is: " << fName << std::endl;
 }
-
+//----------------------------------------------------------------------------------
 void MOpt::GuessFoilType()
 {
     TString name="";
@@ -259,13 +258,13 @@ void MOpt::FillOutputContainers(Int_t which_side)
 
     if(fHasError) {
 
-        fTree[which_side][kBlocked]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_diam_%d_%d",which_side,kBlocked),"d*4.34","goff");
-        fTree[which_side][kDefect]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_diam_%d_%d",which_side,kDefect),"d*4.34","goff");
-        fTree[which_side][kEtching]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_diam_%d_%d",which_side,kEtching),"d*4.34","goff");
+        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kBlocked),"d*4.4","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kDefect),"d*4.4","goff");
+        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kEtching),"d*4.4","goff");
 
-        fTree[which_side][kBlocked]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kBlocked),"","goff");
-        fTree[which_side][kDefect]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kDefect),"","goff");
-        fTree[which_side][kEtching]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kEtching),"","goff");
+        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kBlocked),"","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kDefect),"","goff");
+        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kEtching),"","goff");
 
         fhMapDiam[which_side][kBlocked]->Divide(fhMapN[which_side][kBlocked]);
         //fhMapDiam[which_side][kBlocked]->GetZaxis()->SetRangeUser(60, 100);
@@ -274,14 +273,14 @@ void MOpt::FillOutputContainers(Int_t which_side)
         fhMapDiam[which_side][kEtching]->Divide(fhMapN[which_side][kEtching]);
         //fhMapDiam[which_side][kEtching]->GetZaxis()->SetRangeUser(60, 100);
     }
-    fTree[which_side][kInner]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_diam_%d_%d",which_side,kInner),"d*4.34","goff");
-    fTree[which_side][kOuter]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_diam_%d_%d",which_side,kOuter),"d*4.34","goff");
+    fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kInner),"d*4.4","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kOuter),"d*4.4","goff");
 
-    fTree[which_side][kInner]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kInner),"","goff");
-    fTree[which_side][kOuter]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_n_%d_%d",which_side,kOuter),"","goff");
+    fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kInner),"","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kOuter),"","goff");
 
-    fTree[which_side][kInner]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_fl_%d",which_side),"fl","goff");
-    fTree[which_side][kOuter]->Draw(Form("x*4.34/1000:y*4.34/1000>>hmap_fl_%d",which_side),"fl","goff");
+    fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_fl_%d",which_side),"fl","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_fl_%d",which_side),"fl","goff");
 
     fhMapDiam[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
     fhMapDiam[which_side][kInner]->GetZaxis()->SetRangeUser(40, 70);
@@ -291,9 +290,9 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fhMapLight[which_side]->Divide(fhMapN[which_side][kInner]);
     fhMapLight[which_side]->GetZaxis()->SetRangeUser(140, 180);
 
-    fTree[which_side][kInner]->Draw(Form("d*4.34>>hprof_diam_%d_%d",which_side,kInner),"", "goff");
-    fTree[which_side][kOuter]->Draw(Form("d*4.34>>hprof_diam_%d_%d",which_side,kOuter),"", "goff");
-    //fTree[which_side][kOuter+1]->Draw(Form("rim*4.34>>hprof_diam_%d_%d",which_side,kOuter+1),"", "goff");
+    fTree[which_side][kInner]->Draw(Form("d*4.4>>hprof_diam_%d_%d",which_side,kInner),"", "goff");
+    fTree[which_side][kOuter]->Draw(Form("d*4.4>>hprof_diam_%d_%d",which_side,kOuter),"", "goff");
+    //fTree[which_side][kOuter+1]->Draw(Form("rim*4.4>>hprof_diam_%d_%d",which_side,kOuter+1),"", "goff");
 
     fhProfDiam[which_side][kInner]->Fit(ffProfFit[which_side][kInner], "RNQ","",40,80);
     fhProfDiam[which_side][kOuter]->Fit(ffProfFit[which_side][kOuter], "RNQ","",60,100);
@@ -349,10 +348,10 @@ void MOpt::CalculateStd(Int_t which_side, Int_t which_hole)
     Double_t mean = 0;
 
     while(reader.Next()) {
-        globalBin = fhMapStd[which_side][which_hole]->FindBin(*x_t*4.34/1000., *y_t*4.34/1000.);
+        globalBin = fhMapStd[which_side][which_hole]->FindBin(*x_t*4.4/1000., *y_t*4.4/1000.);
         mean = fhMapDiam[which_side][which_hole]->GetBinContent(globalBin);
 
-        fhMapStd[which_side][which_hole]->Fill(*x_t*4.34/1000., *y_t*4.34/1000., pow((*d_t*4.34-mean),2.));
+        fhMapStd[which_side][which_hole]->Fill(*x_t*4.4/1000., *y_t*4.4/1000., pow((*d_t*4.4-mean),2.));
     }
     fhMapStd[which_side][which_hole]->Divide(fhMapN[which_side][which_hole]);
     //fhMapStd[which_side][which_hole]->Print();

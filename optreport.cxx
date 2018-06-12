@@ -280,7 +280,8 @@ void MOptFrame::LoadFileProtoScript(const TString infilename)
 {
     // output directory for pdf report and processed ROOT files
     // (better to use absolute path)
-    static TString odir("/home/vargyas/cernbox/Work/ALICE/serviceWork/OS");
+    //static TString odir("/home/vargyas/cernbox/Work/ALICE/serviceWork/OS");
+    static TString odir("/mnt/alicetpc/storage/opticalData/results_svm");
     Int_t which_side=-1;
 
     if(infilename.Contains("-s") || infilename.Contains("_S_") || infilename.Contains("_S-")) {
@@ -487,7 +488,9 @@ int main(int argc, char **argv)
 
     TString infile_seg = argv[1];
 
-    const TString basedir = "/home/vargyas/cernbox/Work/ALICE/serviceWork/OS/";
+    //const TString basedir = "/home/vargyas/cernbox/Work/ALICE/serviceWork/OS/";
+    const TString basedir = "/mnt/alicetpc/storage/opticalData/results_svm/";
+
     //const TString basedir = "/home/vargyas/Downloads/";
     TString infile_s = Form("%s%s",basedir.Data(),infile_seg.Data());
     TString infile_u(infile_s);

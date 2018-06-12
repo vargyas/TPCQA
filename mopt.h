@@ -23,7 +23,7 @@
 #include "TString.h"
 
 #include "TCanvas.h"
-#include "TRootEmbeddedCanvas.h"
+//#include "TRootEmbeddedCanvas.h"
 #include "TPad.h"
 #include "TLegend.h"
 #include "TLine.h"
@@ -38,48 +38,48 @@
 #include "TEnv.h"
 #include "TRef.h"
 
-#include "RQ_OBJECT.h"      // use this for linux
+//#include "RQ_OBJECT.h"      // use this for linux
 //#include "RQ_Object.h"            // use this for mac and win
 
-#include "TQObject.h"
-#include "TApplication.h"
-#include "TGFileDialog.h"
-#include "TGButton.h"
-#include "TGMsgBox.h"
-#include "TGTab.h"
-#include "TGStatusBar.h"
-#include "TPolyMarker.h"
-#include "TGLabel.h"
+//#include "TQObject.h"
+//#include "TApplication.h"
+//#include "TGFileDialog.h"
+//#include "TGButton.h"
+//#include "TGMsgBox.h"
+//#include "TGTab.h"
+//#include "TGStatusBar.h"
+//#include "TPolyMarker.h"
+//#include "TGLabel.h"
 
 #include <TClass.h>
-#include <TVirtualX.h>
-#include <TVirtualPadEditor.h>
-#include <TGResourcePool.h>
-#include <TGListBox.h>
-#include <TGListTree.h>
-#include <TGFSContainer.h>
-#include <TGClient.h>
-#include <TGFrame.h>
-#include <TGIcon.h>
-#include <TGTextEntry.h>
-#include <TGNumberEntry.h>
-#include <TGMenu.h>
-#include <TGCanvas.h>
-#include <TGComboBox.h>
-#include <TGSlider.h>
-#include <TGDoubleSlider.h>
-#include <TGTextEdit.h>
-#include <TGShutter.h>
-#include <TGProgressBar.h>
-#include <TGColorSelect.h>
+//#include <TVirtualX.h>
+//#include <TVirtualPadEditor.h>
+//#include <TGResourcePool.h>
+//#include <TGListBox.h>
+//#include <TGListTree.h>
+//#include <TGFSContainer.h>
+//#include <TGClient.h>
+//#include <TGFrame.h>
+//#include <TGIcon.h>
+//#include <TGTextEntry.h>
+//#include <TGNumberEntry.h>
+//#include <TGMenu.h>
+//#include <TGCanvas.h>
+//#include <TGComboBox.h>
+//#include <TGSlider.h>
+//#include <TGDoubleSlider.h>
+//#include <TGTextEdit.h>
+//#include <TGShutter.h>
+//#include <TGProgressBar.h>
+//#include <TGColorSelect.h>
 #include <TColor.h>
-#include <TRandom.h>
+//#include <TRandom.h>
 #include <TSystem.h>
 #include <TSystemDirectory.h>
 #include <TKey.h>
-#include <TGDockableFrame.h>
-#include <TGFontDialog.h>
-#include <TFrame.h>
+//#include <TGDockableFrame.h>
+//#include <TGFontDialog.h>
+//#include <TFrame.h>
 
 enum sides {kSegmented, kUnsegmented};
 enum holetype {kInner, kOuter, kBlocked, kDefect, kEtching, kRim};
@@ -92,7 +92,7 @@ enum holetype {kInner, kOuter, kBlocked, kDefect, kEtching, kRim};
 
 class MOpt
 {
-RQ_OBJECT("MOpt")
+//RQ_OBJECT("MOpt")
 
 private:
     Int_t fType;                ///< Type of the foil: 0=IROC, 1=OROC1, 2=OROC2, 3=OROC3, 4=else (not recognised)
@@ -104,6 +104,7 @@ private:
     TString fName;              ///< Name of the foils as guessed from the directory name
     TTree * fTree[2][5];        ///< Input tree, S/U side, inner and outer and defects
     TH2D * fhMapDiam[2][5];     ///< S/U side, inner and outer hole map histograms
+    //TH2D * fhMapEcc[2][5];      ///< S/U side, inner and outer eccentricity map histograms
     TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
     TH2D * fhMapN[2][5];
     TH2D * fhMapRim[2];         ///< S/U side rim map (calculated here)
