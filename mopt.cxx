@@ -254,11 +254,11 @@ void MOpt::CreateOutputContainers(Int_t which_side)
     Double_t xx[] = {467.0, 595.8, 726.2, 867.0, 867.0};
     Double_t yy[] = {496.5, 353.0, 350.0, 379.0, 379.0};
 
-    // correction to increase above sizes
-    // (nbins will grow accordingly, keeping the distance ratio)
-    // set to zero because I think it is not needed, but keeping the compatibility
-    Double_t corrx=0.00;
-    Double_t corry=0.00;
+    // correction to grow above sizes
+    // (only the container size, to account for e.g. shift of the foil in the scanner)
+    // nbins will grow accordingly, keeping the distance ratio
+    Double_t corrx=0.05;
+    Double_t corry=0.05;
 
     Int_t nx[5], ny[5];
     for(Int_t i=0; i<5; ++i) {
