@@ -272,6 +272,8 @@ void MOpt::CreateOutputContainers(Int_t which_side)
     {
         // might need adjustment -yy[fType]+offset, offset
         fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapEllipseA[i][j] = new TH2D(Form("hmap_ellipse_a_%d_%d",i,j),Form("%s ellipse a",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapEllipseB[i][j] = new TH2D(Form("hmap_ellipse_b_%d_%d",i,j),Form("%s ellipse b",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
         fhMapEcc[i][j]  = new TH2D(Form("hmap_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
         fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
 
@@ -279,6 +281,8 @@ void MOpt::CreateOutputContainers(Int_t which_side)
         fhMapDiamCentered[i][j] = new TH2D(Form("hmap0_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
         fhMapEccCentered[i][j]  = new TH2D(Form("hmap0_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
         fhMapNCentered[i][j]    = new TH2D(Form("hmap0_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+        fhMapEllipseACentered[i][j]    = new TH2D(Form("hmap0_ellipse_a_%d_%d",i,j),   Form("%s ellipse a",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+        fhMapEllipseBCentered[i][j]    = new TH2D(Form("hmap0_ellipse_b_%d_%d",i,j),   Form("%s ellipse b",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
     }
     for(Int_t j=0; j<2; j++)
     {
@@ -316,6 +320,14 @@ void MOpt::FillOutputContainers(Int_t which_side)
         fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kDefect),  "(1-b/a)","goff");
         fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kEtching),"(1-b/a)","goff");
 
+        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_a_%d_%d",which_side,kBlocked),"a*4.4","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_a_%d_%d",which_side,kDefect),  "a*4.4","goff");
+        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_a_%d_%d",which_side,kEtching),"a*4.4","goff");
+
+        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_b_%d_%d",which_side,kBlocked),"b*4.4","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_b_%d_%d",which_side,kDefect),  "b*4.4","goff");
+        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_b_%d_%d",which_side,kEtching),"b*4.4","goff");
+
         fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kBlocked),"","goff");
         fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kDefect),"","goff");
         fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kEtching),"","goff");
@@ -333,6 +345,12 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kInner),"(1-b/a)*4.4","goff");
     fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kOuter),"(1-b/a)*4.4","goff");
 
+    fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_a_%d_%d",which_side,kInner),"a*4.4","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_a_%d_%d",which_side,kOuter),  "a*4.4","goff");
+
+    fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_b_%d_%d",which_side,kInner),"b*4.4","goff");
+    fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ellipse_b_%d_%d",which_side,kOuter),  "b*4.4","goff");
+
     fTree[which_side][kInner]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kInner),"","goff");
     fTree[which_side][kOuter]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kOuter),"","goff");
 
@@ -348,6 +366,15 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fhMapEcc[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
     fhMapEcc[which_side][kOuter]->GetZaxis()->SetRangeUser(0.02, 0.3);
 
+    fhMapEllipseA[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
+    fhMapEllipseA[which_side][kInner]->GetZaxis()->SetRangeUser(40, 70);
+    fhMapEllipseA[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
+    fhMapEllipseA[which_side][kOuter]->GetZaxis()->SetRangeUser(60, 100);
+    fhMapEllipseB[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
+    fhMapEllipseB[which_side][kInner]->GetZaxis()->SetRangeUser(40, 70);
+    fhMapEllipseB[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
+    fhMapEllipseB[which_side][kOuter]->GetZaxis()->SetRangeUser(60, 100);
+
     fhMapLight[which_side]->Divide(fhMapN[which_side][kInner]);
     fhMapLight[which_side]->GetZaxis()->SetRangeUser(140, 180);
 
@@ -360,7 +387,6 @@ void MOpt::FillOutputContainers(Int_t which_side)
 
     CalculateStd(which_side, kInner);
     CalculateStd(which_side, kOuter);
-
     CalculateRim(which_side);
 }
 //----------------------------------------------------------------------------------
@@ -491,6 +517,8 @@ void MOpt::DrawMaps(TPad * p, Int_t which_side, Int_t which_hole, Int_t which_hi
     if(which_histo==3) fhMapRim[which_side]->Draw("colz");
     if(which_histo==4) fhMapLight[which_side]->Draw("colz");
     if(which_histo==5) fhMapEcc[which_side][which_hole]->Draw("colz");
+    if(which_histo==6) fhMapEllipseA[which_side][which_hole]->Draw("colz");
+    if(which_histo==7) fhMapEllipseB[which_side][which_hole]->Draw("colz");
 
     DrawOrigoShift(which_side);
     DrawFrame();
@@ -716,12 +744,23 @@ void MOpt::SaveRootForCorrelation()
             ShiftHisto(fhMapDiam[kUnsegmented][ihole], fhMapDiamCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
             fhMapDiamCentered[kUnsegmented][ihole]->Write(Form("hd%su",holes[ihole].Data()));
 
-
             ShiftHisto(fhMapEcc[kSegmented][ihole], fhMapEccCentered[kSegmented][ihole], fShift[0], fShift[1]);
             htmp = FlipHisto(fhMapEccCentered[kSegmented][ihole]);
             htmp->Write(Form("he%ss",holes[ihole].Data()));
             ShiftHisto(fhMapEcc[kUnsegmented][ihole], fhMapEccCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
             fhMapEccCentered[kUnsegmented][ihole]->Write(Form("he%su",holes[ihole].Data()));
+
+            ShiftHisto(fhMapEllipseA[kSegmented][ihole], fhMapEllipseACentered[kSegmented][ihole], fShift[0], fShift[1]);
+            htmp = FlipHisto(fhMapEllipseACentered[kSegmented][ihole]);
+            htmp->Write(Form("ha%ss",holes[ihole].Data()));
+            ShiftHisto(fhMapEllipseA[kUnsegmented][ihole], fhMapEllipseACentered[kUnsegmented][ihole], fShift[0], fShift[1]);
+            fhMapEllipseACentered[kUnsegmented][ihole]->Write(Form("ha%su",holes[ihole].Data()));
+
+            ShiftHisto(fhMapEllipseB[kSegmented][ihole], fhMapEllipseBCentered[kSegmented][ihole], fShift[0], fShift[1]);
+            htmp = FlipHisto(fhMapEllipseBCentered[kSegmented][ihole]);
+            htmp->Write(Form("hb%ss",holes[ihole].Data()));
+            ShiftHisto(fhMapEllipseB[kUnsegmented][ihole], fhMapEllipseBCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
+            fhMapEllipseBCentered[kUnsegmented][ihole]->Write(Form("hb%su",holes[ihole].Data()));
 
             ShiftHisto(fhMapN[kSegmented][ihole], fhMapNCentered[kSegmented][ihole], fShift[0], fShift[1]);
             htmp = FlipHisto(fhMapNCentered[kSegmented][ihole]);

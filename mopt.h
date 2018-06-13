@@ -104,6 +104,8 @@ private:
     TString fName;              ///< Name of the foils as guessed from the directory name
     TTree * fTree[2][5];        ///< Input tree, S/U side, inner and outer and defects
     TH2D * fhMapDiam[2][5];     ///< S/U side, inner and outer hole map histograms
+    TH2D * fhMapEllipseA[2][5];     ///< S/U side, inner and outer small axis of the ellipse
+    TH2D * fhMapEllipseB[2][5];     ///< S/U side, inner and outer large axis of the ellipse
     TH2D * fhMapEcc[2][5];      ///< S/U side, inner and outer eccentricity map histograms
     TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
     TH2D * fhMapN[2][5];
@@ -112,6 +114,8 @@ private:
     // centered histograms for later correlation studies
     TH2D * fhMapDiamCentered[2][5];     ///< S/U side, inner and outer hole map histograms
     TH2D * fhMapEccCentered[2][5];      ///< S/U side, inner and outer eccentricity map histograms
+    TH2D * fhMapEllipseACentered[2][5];     ///< S/U side, inner and outer small axis of the ellipse
+    TH2D * fhMapEllipseBCentered[2][5];     ///< S/U side, inner and outer large axis of the ellipse
     TH2D * fhMapStdCentered[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
     TH2D * fhMapNCentered[2][5];
     TH2D * fhMapRimCentered[2];         ///< S/U side rim map (calculated here)

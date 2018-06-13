@@ -26,8 +26,8 @@ private:
 
 protected:
     MOpt                * fOpt;
-    TCanvas             * fCanv[7];
-    TPad                * fPad[10][7]; ///< max. 10 pads make space for labels, on 7 tabs
+    TCanvas             * fCanv[9];
+    TPad                * fPad[10][9]; ///< max. 10 pads make space for labels, on 9 tabs
 
 public:
     MOptFrame(Int_t location, UInt_t w, UInt_t h);
@@ -49,7 +49,7 @@ public:
     void DrawRimMaps(Int_t which_side);
     void DrawErrorMaps(Int_t which_side);
     void DrawEccMaps(Int_t which_side);
-
+    void DrawEllipseMaps(Int_t which_side, Int_t which_axis);
     void Save();
     void Print();
 };
@@ -84,7 +84,7 @@ void MOptFrame::CreateDividedPad2(Int_t itab)
     fYtop = 0.2;
     Double_t middle_y = fYbottom + (1.- fYtop - fYbottom)/2.;
 
-    TPaveLabel * sides[2][4];
+    TPaveLabel * sides[2][9];
 
     fCanv[itab]->cd();
 
@@ -141,7 +141,7 @@ void MOptFrame::CreateDividedPad4(Int_t itab)
     Double_t middle_x = fXleft + (1.- fXleft - fXright)/2.;
     Double_t middle_y = fYbottom + (1.- fYtop - fYbottom)/2.;
 
-    TPaveLabel * sides[2][6];
+    TPaveLabel * sides[2][9];
 
     fCanv[itab]->cd();
 
@@ -203,7 +203,7 @@ void MOptFrame::CreateDividedPad6(Int_t itab)
     Double_t middle_x_2 = fXleft + 2.*(1.- fXleft - fXright)/3.;
     Double_t middle_y = fYbottom + (1.- fYtop - fYbottom)/2.;
 
-    TPaveLabel * sides[2][5];
+    TPaveLabel * sides[2][9];
 
     fCanv[itab]->cd();
 
@@ -270,7 +270,7 @@ void MOptFrame::DrawFoilNameLabel(Bool_t clear)
     lname->SetTextSize(30./(fPad[3][0]->GetBBox().fHeight));
     lname->SetTextFont(42);
 
-    for(Int_t itab=0; itab<7; itab++)
+    for(Int_t itab=0; itab<9; itab++)
     {
         fCanv[itab]->cd(); fPad[3][itab]->cd();
         lname->Draw();
@@ -312,6 +312,8 @@ void MOptFrame::LoadFileProtoScript(const TString infilename)
     DrawRimMaps(which_side);
     DrawErrorMaps(which_side);
     DrawEccMaps(which_side);
+    DrawEllipseMaps(which_side, 0);
+    DrawEllipseMaps(which_side, 1);
 }
 //---------------------------------------------------------------------------
 void MOptFrame::Save()
@@ -327,7 +329,7 @@ void MOptFrame::Print()
     std::cout << "Saving report to: " << tmpname << std::endl;
 
     // maps are too big, saving to png first, then merge to pdf
-    for(Int_t itab=0;itab<7;++itab)
+    for(Int_t itab=0;itab<9;++itab)
     {
         fCanv[itab]->Print(Form("~/opt%d.png",itab));
     }
@@ -347,7 +349,7 @@ MOptFrame::MOptFrame(Int_t location, UInt_t w, UInt_t h)
 
     // Create foil object (make sure to clear it)
     fOpt = new MOpt(location);
-    for(Int_t itab=0; itab<7; ++itab)
+    for(Int_t itab=0; itab<9; ++itab)
         fCanv[itab] = new TCanvas(Form("Canvas_%d",itab),"",w-20,h-120);
     CreateDividedPad4(0);
     CreateDividedPad2(1);
@@ -356,6 +358,8 @@ MOptFrame::MOptFrame(Int_t location, UInt_t w, UInt_t h)
     CreateDividedPad4(4);
     CreateDividedPad6(5);
     CreateDividedPad4(6);
+    CreateDividedPad4(7);
+    CreateDividedPad4(8);
 }
 //---------------------------------------------------------------------------
 MOptFrame::~MOptFrame()
@@ -503,7 +507,26 @@ void MOptFrame::DrawEccMaps(Int_t which_side)
     }
 }
 //---------------------------------------------------------------------------
+void MOptFrame::DrawEllipseMaps(Int_t which_side, Int_t axis)
+{
+    gStyle->SetOptStat(0);
 
+    Int_t itab = axis==0 ? 7:8;
+    fCanv[itab]->cd();
+    // draw segmented side
+    if(which_side==kSegmented)
+    {
+        fOpt->DrawMaps(fPad[4][itab], kSegmented, kInner, itab-1);
+        fOpt->DrawMaps(fPad[5][itab], kSegmented, kOuter, itab-1);
+    }
+    // draw unsegmented side
+    if(which_side==kUnsegmented)
+    {
+        fOpt->DrawMaps(fPad[6][itab], kUnsegmented, kInner, itab-1);
+        fOpt->DrawMaps(fPad[7][itab], kUnsegmented, kOuter, itab-1);
+    }
+}
+//---------------------------------------------------------------------------
 
 //void optreport(const TString infile_seg)
 int main(int argc, char **argv)
