@@ -178,24 +178,36 @@ class Foil:
         f3 = TF1("f3","pol1",-1000,1000); f3.SetParameters(-m_bp[i]/2., 0)
         return f0,f1,f2,f3
         
+    def CreateHisto(self, name, title):
+        return TH2D(name, title, 224,-224*2,224*2,160,-160*3/2.,160*3/2.)
+    
     def CreateContainers(self):
         """
         Create all 2D histograms for gain (1) and diameters (6)
         """
-        self._hdiam = []
-        self._hdiam.append( TH2D("hdis","Inner segmented",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hdiu","Inner unsegmented",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hdos","Outer segmented",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hdou","Outer unsegmented",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hdstds","Std segmented",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hdstdu","Std unsegmented",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-
-        self._hdiam.append( TH2D("hnis","Inner segmented N",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hniu","Inner unsegmented N",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hnos","Outer segmented N",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
-        self._hdiam.append( TH2D("hnou","Outer unsegmented N",224,-224*2,224*2,160,-160*3/2.,160*3/2.) )
+        self._hdiam = {}
         
-        self._hgain = TH2D("hgain_{}".format(self._ID),"MEASURED GAIN",224,-224*2,224*2,160,-160*3/2.,160*3/2.) 
+        self._hdiam["dis"] = self.CreateHisto("hdis", "Inner segmented diameter")
+        self._hdiam["diu"] = self.CreateHisto("hdiu", "Inner unsegmented diameter")
+        self._hdiam["dos"] = self.CreateHisto("hdos", "Outer segmented diameter")
+        self._hdiam["dou"] = self.CreateHisto("hdou", "Outer unsegmented diameter")
+        
+        self._hdiam["nis"] = self.CreateHisto("hnis", "Inner segmented density")
+        self._hdiam["niu"] = self.CreateHisto("hniu", "Inner unsegmented density")
+        self._hdiam["nos"] = self.CreateHisto("hnos", "Outer segmented density")
+        self._hdiam["nou"] = self.CreateHisto("hnou", "Outer unsegmented density")
+        
+        self._hdiam["ais"] = self.CreateHisto("hais", "Inner segmented minor axis")
+        self._hdiam["aiu"] = self.CreateHisto("haiu", "Inner unsegmented minor axis")
+        self._hdiam["aos"] = self.CreateHisto("haos", "Outer segmented minor axis")
+        self._hdiam["aou"] = self.CreateHisto("haou", "Outer unsegmented minor axis")
+        
+        self._hdiam["bis"] = self.CreateHisto("hbis", "Inner segmented major axis")
+        self._hdiam["biu"] = self.CreateHisto("hbiu", "Inner unsegmented major axis")
+        self._hdiam["bos"] = self.CreateHisto("hbos", "Outer segmented major axis")
+        self._hdiam["bou"] = self.CreateHisto("hbou", "Outer unsegmented major axis")
+        
+        self._hgain = self.CreateHisto("hgain_{}".format(self._ID),"MEASURED GAIN") 
         
     def CopyOptical(self, hin, hout):
         """
@@ -218,54 +230,25 @@ class Foil:
         Loads optical histograms from ROOT file. If no ROOT file is present, it loads
         text file and generates ROOT file.
         """
-        #if 1==2: print('impossibru')
         if os.path.isfile(self._odir+infilename+".root"):
             print("\t Loading optical from ROOT...")
-            histnames = ["hdis","hdiu","hdos","hdou","hdstdis","hdstdiu"]
+            histnames = ["hdis","hdiu","hdos","hdou","hnis","hniu","hnos","hnou","hais","haiu","haos","haou"]
             self.infile = TFile.Open(self._odir+infilename+".root")
+            self.infile.ls()
             for i in range(len(histnames)):
                 #self._hdiam[i] = self.infile.Get(histnames[i])
-                self.CopyOptical(self.infile.Get(histnames[i]), self._hdiam[i])
-                self._hdiam[i].SetName("{}_{}".format(self._hdiam[i].GetName(),self._ID))
+                histname = histnames[i]
+                hindex = histname[1:]
+                print(histname, hindex)
+                self.CopyOptical(self.infile.Get(histnames[i]), self._hdiam[hindex])
+                self._hdiam[hindex].SetName("{}_{}".format(self._hdiam[hindex].GetName(),self._ID))
         
-        # This is currently deprecated, use convert_opt.py instead
-        else:     
-            print("\t Loading optical from text...")
-            print("\t", self._odir+infilename )
-            
-            rootfile = TFile(self._odir+infilename+".root","RECREATE")
-            
-            self._topt = TTree("opt_tree_{}".format(self._ID), "optical tree")
-            self._topt.SetDirectory(0); 
-            #self._topt.ReadFile(infilename, "x/D:y:d_i_s:d_o_s:d_i_u:d_o_u:n_i_s:n_o_s:n_i_u:n_o_u:std_i_s:std_o_s:std_i_u:std_o_u:foo1:foo2")
-            self._topt.ReadFile(self._odir+infilename+".txt", "x/D:y:d_i_s:d_o_s:d_b_s:d_d_s:d_e_s:d_i_u:d_o_u:d_b_u:d_d_u:d_e_u:n_i_s:n_o_s:n_b_s:n_d_s:n_e_s:n_i_u:n_o_u:n_b_u:n_d_u:n_e_u:std_i_s:std_o_s:std_i_u:std_o_u:fg_s:fg_u")        
-            self._topt.Print()
-            # note: segmented side should be flipped
-            self._topt.Draw("y:-x>>hdis","d_i_s","goff")
-            self._topt.Draw("y:x>>hdiu", "d_i_u","goff")
-            self._topt.Draw("y:-x>>hdos","d_o_s","goff")
-            self._topt.Draw("y:x>>hdou", "d_o_u","goff")
-            self._topt.Draw("y:-x>>hdstds","std_o_s","goff")
-            self._topt.Draw("y:x>>hdstdu", "std_o_u","goff")
-            # correcting diameter histograms for different
-            # binning, optical is 1mm step, gain is 3mmx4mm
-            # also normalising each diameter histo to its mean
-            self._diam_mean = [0, 0, 0, 0, 0, 0]
-            
-            #rootfile = TFile(self._odir+infilename+".root","RECREATE")
-            for i in range(len(self._hdiam)):
-                self._hdiam[i].Scale(1./12.)   
-                self._hdiam[i].Print()
-                # threshold should be different for rim?
-                self._diam_mean[i] = GetMeanZ(self._hdiam[i], 1)
-                #self._hdiam[i].Scale(1./self._diam_mean[i])
-                self._hdiam[i].Write()
-                self._hdiam[i].SetName("{}_{}".format(self._hdiam[i].GetName(),self._ID))
-
-            rootfile.Write()
-            
-        for i in range(len(self._hdiam)):
-            self.CleanHist(self._hdiam[i])
+        else:
+            print("\t Input file", infilename, "cannot be found, exiting program")
+            sys.exit
+        
+        for ih in self._hdiam:
+            self.CleanHist(self._hdiam[ih])
         
     def SetName(self, infilename):
         """
@@ -335,69 +318,27 @@ class Foil:
     def ConvertHistsToArray(self):
         print("\t ConvertHistsToArray...")
         # load arrays from histogram and reshape them to 1D
-        self._is = hist2array(self._hdiam[0]).reshape(224*160)                
-        self._iu = hist2array(self._hdiam[1]).reshape(224*160)                
-        self._os = hist2array(self._hdiam[2]).reshape(224*160)
-        self._ou = hist2array(self._hdiam[3]).reshape(224*160)
-        self._stds =hist2array(self._hdiam[4]).reshape(224*160)     
-        self._stdu =hist2array(self._hdiam[5]).reshape(224*160)     
+        self._adiam = {}
+        self._adiam_c = {}
         
-        self._g = hist2array(self._hgain).reshape(224*160)
-           
-        # find nonzero indices and create a mask where non of the arrays are 0
-        #inner = np.nonzero(self._is)
-        #outers = np.nonzero(self._os)
-        #outeru = np.nonzero(self._ou)
-        #gain = np.nonzero(self._g)
-        
-        #mymask = reduce(np.intersect1d, (inner,outers,outeru,gain))
-        #allfield = np.arange(224*160)
-        #self._mask = np.isin(allfield, mymask) 
-        #np.set_printoptions(threshold='nan')
-        #print(len(self._mask))
-        #print(self._mask)
-        # generate masked arrays accordingly
-        #self._is_c = ma.masked_array(self._is, mask=self._mask)
-        #self._os_c = ma.masked_array(self._os, mask=self._mask)
-        #self._ou_c = ma.masked_array(self._ou, mask=self._mask)
-        #self._g_c = ma.masked_array(self._g, mask=self._mask)
-        
-        # another method is to mask the zeroes directly
-        #self._is_c = ma.masked_values(self._is, 0)
-        #self._os_c = ma.masked_values(self._os, 0)
-        #self._ou_c = ma.masked_values(self._ou, 0)
-        #self._g_c = ma.masked_values(self._g, 0)
-        
+        for ikey in self._hdiam.keys():
+            self._adiam[ikey] = hist2array(self._hdiam[ikey]).reshape(224*160)
+                                    
         # probably best is to use this function and mask outlyers while calculating the correlation
-        self._is_c = ma.masked_outside(self._is, 30, 90)
-        self._os_c = ma.masked_outside(self._os, 40, 150)
-        self._ou_c = ma.masked_outside(self._ou, 40, 150)
-        self._stds_c = ma.masked_outside(self._stds, 0, 10)
-        self._stdu_c = ma.masked_outside(self._stdu, 0, 10)
+        for ikey in ["dis","diu","ais","aiu","bis","biu"]:
+            self._adiam_c[ikey] = ma.masked_outside(self._adiam[ikey], 30, 90)
+       
+        for ikey in ["dos","dou","aos","aou","bos","bou"]:
+            self._adiam_c[ikey] = ma.masked_outside(self._adiam[ikey], 40, 150)
+
+        self._g = hist2array(self._hgain).reshape(224*160)
         self._g_c = ma.masked_outside(self._g, 0.1, 5)
         
-        self._is_mean =  ma.mean(self._is_c)
-        self._os_mean = ma.mean(self._os_c)
-        self._ou_mean = ma.mean(self._ou_c)
+        self._is_mean =  ma.mean(self._adiam_c["dis"])
+        self._os_mean = ma.mean(self._adiam_c["dos"])
+        self._ou_mean = ma.mean(self._adiam_c["dou"])
         print("Inner mean: {:.1f}, Outer mean: {:.1f}".format( self._is_mean, self._ou_mean) )
-        #np.set_printoptions(threshold='nan')
-        #print(allarr)
-        #print(len(allarr))
-        
-        # generate normalized arrays
-        '''
-        self._is_cn = self._is_c/self._is_mean
-        self._os_cn = self._os_c/self._os_mean
-        self._ou_cn = self._ou_c/self._ou_mean
-        self._stds_cn =self._stds_c/self._os_mean
-        self._stdu_cn =self._stdu_c/self._ou_mean
-        
-        self._is_n =self._is/self._is_mean
-        self._os_n =self._os/self._os_mean
-        self._ou_n =self._ou/self._ou_mean
-        self._stds_n =self._stds/self._os_mean
-        self._stdu_n =self._stdu/self._ou_mean
-        '''
+
         
     def OptFormula(self, coeffs, plot=True):
         w_i = coeffs[0]
@@ -406,8 +347,7 @@ class Foil:
         w_rim = coeffs[3]
         w_all = w_i+w_ou+w_os+w_rim
         #if(plot): return w_i* self._iu*self._ou
-        return w_i/w_all*self._is + w_ou/w_all*self._ou+ w_os/w_all*self._os #+ w_rim/w_all*(self._ou-self._is)
-        #else: return w_i/w_all*self._is_c +   w_ou/w_all*(self._ou_c) + w_os/w_all*(self._os_c )# + w_os/w_all*self._os_c
+        return w_ou/w_all*self._adiam_c["dou"]
         
     def GainFormula(self, coeffs, plot=False):
         f_g_all = [-0.0456, -0.0456, -0.0434, -0.0456]
@@ -432,7 +372,7 @@ class Foil:
         
     def GeneratePredGain(self, coeffs):
         print("Generating pred. gain with parameters", coeffs)
-        self._hpredgain = TH2D("hpredgain_{}".format(self._ID),"PREDICTED GAIN",224,-224*2,224*2,160,-160*3/2.,160*3/2.)        
+        self._hpredgain =  self.CreateHisto("hpredgain_{}".format(self._ID),"PREDICTED GAIN")        
         self._predgain = self.GainFormula(coeffs,True).reshape(224, 160) 
         print("predicted gain mean:",np.mean(self._predgain[self._predgain<10]))
         print("predicted gain std:",np.std(self._predgain[self._predgain<10]))
@@ -509,25 +449,25 @@ class Foil:
         # default size is IROC, change to OROC2 if recognized
         if self._type==2: xrange = 400
         
-        self._hdiam[0].GetXaxis().SetRangeUser(-xrange, xrange)
-        self._hdiam[0].GetZaxis().SetRangeUser(40, 70)
-        self._hdiam[0].SetTitle("INNER SEGMENTED")
-        self._hdiam[0].GetZaxis().SetTitle("hole diameter [#mum]")
-        self.FormatMapHist(self._hdiam[0])
+        self._hdiam["dis"].GetXaxis().SetRangeUser(-xrange, xrange)
+        self._hdiam["dis"].GetZaxis().SetRangeUser(40, 70)
+        self._hdiam["dis"].SetTitle("INNER SEGMENTED")
+        self._hdiam["dis"].GetZaxis().SetTitle("hole diameter [#mum]")
+        self.FormatMapHist(self._hdiam["dis"])
                 
-        self._hdiam[2].GetXaxis().SetRangeUser(-xrange, xrange)
-        self._hdiam[2].GetZaxis().SetRangeUser(60, 100)
-        self._hdiam[2].SetTitle("OUTER SEGMENTED")
-        self._hdiam[2].GetZaxis().SetTitle("hole diameter [#mum]")
-        self.FormatMapHist(self._hdiam[2])
+        self._hdiam["dos"].GetXaxis().SetRangeUser(-xrange, xrange)
+        self._hdiam["dos"].GetZaxis().SetRangeUser(60, 100)
+        self._hdiam["dos"].SetTitle("OUTER SEGMENTED")
+        self._hdiam["dos"].GetZaxis().SetTitle("hole diameter [#mum]")
+        self.FormatMapHist(self._hdiam["dos"])
 
-        self._hdiam[3].GetXaxis().SetRangeUser(-xrange, xrange)
-        self._hdiam[3].GetZaxis().SetRangeUser(60, 100)
-        self._hdiam[3].SetTitle("OUTER UNSEGMENTED")
-        self._hdiam[3].GetZaxis().SetTitle("hole diameter [#mum]")
-        self.FormatMapHist(self._hdiam[3])
+        self._hdiam["dou"].GetXaxis().SetRangeUser(-xrange, xrange)
+        self._hdiam["dou"].GetZaxis().SetRangeUser(60, 100)
+        self._hdiam["dou"].SetTitle("OUTER UNSEGMENTED")
+        self._hdiam["dou"].GetZaxis().SetTitle("hole diameter [#mum]")
+        self.FormatMapHist(self._hdiam["dou"])
 
-        self._hopt = TH2D("hopt_{}".format(self._ID),"LINEAR COMBINATION",224,-224*2,224*2,160,-160*3/2.,160*3/2.)        
+        self._hopt = self.CreateHisto("hopt_{}".format(self._ID),"LINEAR COMBINATION")        
         opt = self.OptFormula(coeffs, True)
         newopt = opt.reshape(224, 160)
         array2hist(newopt, self._hopt)
@@ -546,7 +486,7 @@ class Foil:
 
         # BOTTOM LEFT
         p1 = TPad("p1","",0,0,x/2,y/2); p1.SetRightMargin(0.2)
-        p1.Draw(); p1.cd(); self._hdiam[0].Draw("colz")  
+        p1.Draw(); p1.cd(); self._hdiam["dis"].Draw("colz")  
         c.cd()
         # BOTTOM RIGHT
         p2 = TPad("p2","",x/2,0,x,y/2); p2.SetRightMargin(0.2)
@@ -554,11 +494,11 @@ class Foil:
         c.cd()
         # TOP LEFT
         p3 = TPad("p3","",0,y/2,x/2,y); p3.SetRightMargin(0.2)
-        p3.Draw(); p3.cd();    self._hdiam[2].Draw("colz")    
+        p3.Draw(); p3.cd();    self._hdiam["dos"].Draw("colz")    
         c.cd()
         # TOP RIGHT
         p4 = TPad("p4","",x/2,y/2,x,y); p4.SetRightMargin(0.2)
-        p4.Draw(); p4.cd(); self._hdiam[3].Draw("colz")  
+        p4.Draw(); p4.cd(); self._hdiam["dou"].Draw("colz")  
 
         c.Update()
         c.SaveAs("{}_opt.pdf".format(self._name))
@@ -600,7 +540,7 @@ class Foil:
         c.SaveAs("{}_corr.pdf".format(self._name))
 
         #######################################################################
-        
+        """
         self._hocc = CorrelationArrayToTHN(0, 3, p[0][:], 0, 3, g[0][:], 1)
         self._hocc.SetTitle(self._name)
         self.FormatHist(self._hocc)
@@ -608,6 +548,7 @@ class Foil:
         focc.SetParameters(1000, 1, 0.3)
         focc.SetLineColor(1)
         self._hocc.Fit(focc)
+        self._hocc.Print()
         
         sigma=0
         mean = self._hocc.GetMean()
@@ -626,7 +567,7 @@ class Foil:
         sigma2 = TMath.Sqrt(sigma/n)
         xmean=xmean/n
         print("estimated width: ", self._hocc.GetRMS(), self._hocc.GetStdDev(), sigma2)
-        print("men check", mean, xmean)
+        print("mean check", mean, xmean)
         self._res=focc.GetParameter(2)/focc.GetParameter(1)*100
 
         l = TLegend(0.6, 0.6, 0.88, 0.88)
@@ -639,18 +580,19 @@ class Foil:
         pt.Draw()
 
         c.SaveAs("{}_res.pdf".format(self._name))
-
+        """
     def GetResText(self):
         return "{} #sigma/#mu={:.0f}%".format(self._name, self._res)
 
     def DrawHoleCorrelation(self):
+        print("DrawHoleCorrelation()...")
         # inner average - outer average
         # inner average - outer unsegmented
         # outer segmented - outer unsegmented
-        ia = (0.5*(self._is+self._iu)).reshape(1,224*160)
-        oa = (0.5*(self._os+self._ou)).reshape(1,224*160)
-        os = self._os.reshape(1,224*160)
-        ou = self._ou.reshape(1,224*160)
+        ia = (0.5*(self._adiam["dis"] +self._adiam["diu"])).reshape(1,224*160)
+        oa = (0.5*(self._adiam["dos"]+self._adiam["dou"])).reshape(1,224*160)
+        os = self._adiam["dos"].reshape(1,224*160)
+        ou = self._adiam["dou"].reshape(1,224*160)
         
         h_ia_oa = CorrelationArrayToTHN(40, 60, ia[0][:], 70, 90, oa[0][:], 2)
         h_ia_ou = CorrelationArrayToTHN(40, 60, ia[0][:], 70, 90, ou[0][:], 2)
@@ -685,27 +627,46 @@ class Foil:
         f2.Draw("same")
         f3.Draw("same")
         
-        self._hdiam[6].SetMarkerColor(2)
-        self._hdiam[6].SetMarkerStyle(20)
-        self._hdiam[6].SetMarkerSize(0.1)
-        self._hdiam[6].Draw("same")
+        #self._hdiam[6].SetMarkerColor(2)
+        #self._hdiam[6].SetMarkerStyle(20)
+        #self._hdiam[6].SetMarkerSize(0.1)
+        #self._hdiam[6].Draw("same")
         
         c.SaveAs('{}_alignment.png'.format(self._name))
         
+    def CostForOptAlignment(self, shift):
+        """
+        The absolute value of the difference of the inner 
+        densities of the two sides of the foil
+        """
+        cost = 0  
+        cost += np.sum(np.abs(  self._adiam["nis"]-self._adiam["niu"] ))
+        return cost
+        
+    def CheckOptMapAlignment(self):
+        """
+        Check and corrects the alignment of the optical measurement 
+        of the two sides of the foil. Plots before and after correction data
+        """
+        c = TCanvas("c","",900,600); c.Draw(); 
+        c.Divide(2, 2)
+
+
 # IROC FOILS
 gainSP = ["I-G1-005", "I-G1-006", "I-G1-007", "I-G4-003", "I-G1-008", "I-G1-025"]
 # TRY different I-G4-003s???
 #optSP  = ["I-G1-005-2_2D", "I-G1-006_2D", "I-G1-007-2_2D", "I-G4-003-2_2D", "I-G1-008_2D", "I-G1-025_2D"]
-optSP = ["I-G1-005-2_opt"]
+optSP = ["I-G1-005-2_opt", "I-G1-006_opt", "I-G1-007-2_opt", "I-G4-003-2_opt", "I-G1-008_opt", "I-G1-025_opt"]
+
 gainLP = ["I-G2-004", "I-G2-005", "I-G3-004", "I-G2-015", "I-G3-008", "I-G3-009"]
-optLP  = ["I-G2-004-2_2D", "I-G2-005-2_2D", "I-G3-004_2D", "I-G2-015_2D", "I-G3-008_2D", "I-G3-009-2_2D"]
+optLP  = ["I-G2-004-2_opt", "I-G2-005-2_opt", "I-G3-004_opt", "I-G2-015_opt", "I-G3-008_opt", "I-G3-009-2_opt"]
 
 # OROC FOILS
 #gainO2_S = ["O2-G1-005",    "O2-G1-006",    "O2-G1-008",    "O2-G1-016",    "O2-G1-013",    "O2-G1-018",    "O2-G1-023",    "O2-G4-002",    "O2-G4-020"]
 #optO2_S  = ["O2-G1-005_2D", "O2-G1-006_2D", "O2-G1-008_2D", "O2-G1-016_2D", "O2-G1-013_2D", "O2-G1-018_2D", "O2-G1-023_2D", "O2-G4-002_2D", "O2-G4-020_2D"]
 #every except  and  018
 gainO2_S = ["O2-G1-005",    "O2-G1-006",    "O2-G1-008",    "O2-G1-013",    "O2-G1-016",    "O2-G1-023",    "O2-G4-020",    "O2-G4-002"]
-optO2_S  = ["O2-G1-005_2D", "O2-G1-006_2D", "O2-G1-008_2D", "O2-G1-013_2D", "O2-G1-016_2D", "O2-G1-023_2D", "O2-G4-020_2D", "O2-G4-002_2D"]
+optO2_S  = ["O2-G1-005_opt", "O2-G1-006_opt", "O2-G1-008_opt", "O2-G1-013_opt", "O2-G1-016_opt", "O2-G1-023_opt", "O2-G4-020_opt", "O2-G4-002_opt"]
 #only very good
 #gainO2_S = ["O2-G1-006",    "O2-G1-008",    "O2-G1-016",   "O2-G1-023" ]
 #optO2_S  = ["O2-G1-006_2D", "O2-G1-008_2D", "O2-G1-016_2D", "O2-G1-023_2D"]
@@ -714,7 +675,7 @@ optO2_S  = ["O2-G1-005_2D", "O2-G1-006_2D", "O2-G1-008_2D", "O2-G1-013_2D", "O2-
 #optO2_S  = ["O2-G1-013_2D", "O2-G1-018_2D", "O2-G1-023_2D", "O2-G4-002_2D", "O2-G4-020_2D"]
 
 gainO2_LP = ["O2-G2-007",      "O2-G2-021",    "O2-G2-022",    "O2-G2-027",    "O2-G3-026",    "O2-G3-022"]
-optO2_LP  = ["O2-G2-007-2_2D", "O2-G2-021_2D", "O2-G2-022_2D", "O2-G2-027_2D", "O2-G3-026_2D", "O2-G3-022_2D"]
+optO2_LP  = ["O2-G2-007-2_opt", "O2-G2-021_opt", "O2-G2-022_opt", "O2-G2-027_opt", "O2-G3-026_opt", "O2-G3-022_opt"]
 
 foils = []
 
@@ -746,7 +707,7 @@ if ftype==0:
         foils.append( Foil(ifoil, 0, gainSP[ifoil], optSP[ifoil]) )
 
 print(len(foils))
-coeffs = [-0.2, 0.6, 0.6, 0]
+coeffs = [0, 0, 1, 0]
 # bounds of each parameter:
 # bnds = ((-1E9, 1E9), (-1E9, 1E9), (-10, 0), (0, 10), (0, 10))
 print("Starting minimalization")
@@ -769,11 +730,11 @@ def allcost(coeffs):
 
 
 
-#res = minimize(allcost, coeffs,  method="Nelder-Mead")
-#print(res.message)
-#print(res.x)
+res = minimize(allcost, coeffs,  method="Nelder-Mead")
+print(res.message)
+print(res.x)
 
-plotcoeff = coeffs
+plotcoeff = res.x
 
 for ifoil in foils: 
     ifoil.GeneratePredGain(plotcoeff)
@@ -782,6 +743,9 @@ for ifoil in foils:
     ifoil.DrawCorrelation()
     ifoil.DrawHoleCorrelation()
     
+
+
+
 
 # -----------------------------------------------------------
 # draw correlations:
