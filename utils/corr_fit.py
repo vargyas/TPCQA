@@ -197,6 +197,22 @@ class Foil:
         
         self._hgain = TH2D("hgain_{}".format(self._ID),"MEASURED GAIN",224,-224*2,224*2,160,-160*3/2.,160*3/2.) 
         
+    def CopyOptical(self, hin, hout):
+        """
+        Copies hin into the hout histogram, which is binned similarly but
+        has different ranges. 
+        """
+        nx = hout.GetNbinsX()
+        ny = hout.GetNbinsY()
+        for ix in range(1, nx+1):
+            for iy in range(1, ny+1):
+                x = hout.GetXaxis().GetBinCenter(ix)
+                y = hout.GetYaxis().GetBinCenter(iy)
+                ix_in = hin.GetXaxis().FindBin(x)
+                iy_in = hin.GetYaxis().FindBin(y)
+                z = hin.GetBinContent(ix_in, iy_in)
+                hout.SetBinContent(ix, iy, z)
+        
     def LoadOptical(self, infilename):
         """
         Loads optical histograms from ROOT file. If no ROOT file is present, it loads
@@ -205,12 +221,12 @@ class Foil:
         #if 1==2: print('impossibru')
         if os.path.isfile(self._odir+infilename+".root"):
             print("\t Loading optical from ROOT...")
-            histnames = ["hdis","hdiu","hdos","hdou","hdstds","hdstdu"]
+            histnames = ["hdis","hdiu","hdos","hdou","hdstdis","hdstdiu"]
             self.infile = TFile.Open(self._odir+infilename+".root")
             for i in range(len(histnames)):
-                self._hdiam[i] = self.infile.Get(histnames[i])
+                #self._hdiam[i] = self.infile.Get(histnames[i])
+                self.CopyOptical(self.infile.Get(histnames[i]), self._hdiam[i])
                 self._hdiam[i].SetName("{}_{}".format(self._hdiam[i].GetName(),self._ID))
-                #ROOT.SetOwnership(self._hdiam[i], False)
         
         # This is currently deprecated, use convert_opt.py instead
         else:     
@@ -679,8 +695,8 @@ class Foil:
 # IROC FOILS
 gainSP = ["I-G1-005", "I-G1-006", "I-G1-007", "I-G4-003", "I-G1-008", "I-G1-025"]
 # TRY different I-G4-003s???
-optSP  = ["I-G1-005-2_2D", "I-G1-006_2D", "I-G1-007-2_2D", "I-G4-003-2_2D", "I-G1-008_2D", "I-G1-025_2D"]
-
+#optSP  = ["I-G1-005-2_2D", "I-G1-006_2D", "I-G1-007-2_2D", "I-G4-003-2_2D", "I-G1-008_2D", "I-G1-025_2D"]
+optSP = ["I-G1-005-2_opt"]
 gainLP = ["I-G2-004", "I-G2-005", "I-G3-004", "I-G2-015", "I-G3-008", "I-G3-009"]
 optLP  = ["I-G2-004-2_2D", "I-G2-005-2_2D", "I-G3-004_2D", "I-G2-015_2D", "I-G3-008_2D", "I-G3-009-2_2D"]
 
@@ -703,7 +719,7 @@ optO2_LP  = ["O2-G2-007-2_2D", "O2-G2-021_2D", "O2-G2-022_2D", "O2-G2-027_2D", "
 foils = []
 
 if len(sys.argv)<2:
-    print("No argument provided, processing default standard IROC foil")
+    print("No argument provided, processing default IROC-S foil")
     ftype=0
 else:
     ftype=int(sys.argv[1])
@@ -725,8 +741,8 @@ if ftype==1:
         foils.append( Foil(ifoil, 1, gainLP[ifoil], optLP[ifoil]) )
 if ftype==0:    
     xmin, xmax = 0.6, 1.5
-    for ifoil in range(len(gainSP)):
-#    for ifoil in range(1):
+ #   for ifoil in range(len(gainSP)):
+    for ifoil in range(1):
         foils.append( Foil(ifoil, 0, gainSP[ifoil], optSP[ifoil]) )
 
 print(len(foils))

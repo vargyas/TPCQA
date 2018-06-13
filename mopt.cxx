@@ -8,6 +8,53 @@
 
 
 //----------------------------------------------------------------------------------
+// Flips a TH2D along its x axis, returns new histogram
+TH2D * FlipHisto(TH2D * hold)
+{
+    const Int_t nx = hold->GetNbinsX();
+    const Int_t ny = hold->GetNbinsY();
+    Int_t zero = hold->GetXaxis()->FindBin(0.0000001);
+    Double_t valPos, valNeg;
+
+    TString hname = hold->GetName();
+    TString newName = Form("%s_flip",hname.Data());
+    TH2D * hout = (TH2D*) hold->Clone(newName);
+    hout->Reset();
+
+    for(Int_t ix=zero; ix<=nx; ++ix)
+    {
+        for(Int_t iy=1; iy<=ny; ++iy)
+        {
+            valPos = hold->GetBinContent(ix, iy);
+            valNeg = hold->GetBinContent(nx - ix+1, iy);
+            hout->SetBinContent(ix, iy, valNeg);
+            hout->SetBinContent(nx - ix+1, iy, valPos);
+        }
+    }
+    return hout;
+}
+//----------------------------------------------------------------------------------
+void ShiftHisto(TH2D * hold, TH2D * hnew, double x, double y)
+{
+    const Int_t nx = hold->GetNbinsX();
+    const Int_t ny = hold->GetNbinsY();
+
+    Int_t ix_new, iy_new;
+    Double_t x_new, y_new;
+    for(Int_t ix=1; ix<=nx; ++ix)
+    {
+        for(Int_t iy=1; iy<=ny; ++iy)
+        {
+            x_new = hold->GetXaxis()->GetBinCenter(ix)-x;
+            y_new = hold->GetYaxis()->GetBinCenter(iy)-y;
+            ix_new = hnew->GetXaxis()->FindBin(x_new);
+            iy_new = hnew->GetYaxis()->FindBin(y_new);
+
+            hnew->SetBinContent(ix_new, iy_new, hold->GetBinContent(ix, iy));
+        }
+    }
+}
+//----------------------------------------------------------------------------------
 bool FileExists(char* filename)
 {
     struct stat fileInfo;
@@ -180,6 +227,7 @@ void MOpt::CloseFile(Int_t which_side)
     {
         delete fhMapDiam[which_side][j];
         delete fhMapN[which_side][j];
+        delete fhMapEcc[which_side][j];
     }
     for(Int_t j=0; j<2; j++)
         delete fhMapStd[which_side][j];
@@ -224,11 +272,20 @@ void MOpt::CreateOutputContainers(Int_t which_side)
     {
         // might need adjustment -yy[fType]+offset, offset
         fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapEcc[i][j]  = new TH2D(Form("hmap_ecc_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapEcc[i][j]  = new TH2D(Form("hmap_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
         fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+
+        //
+        fhMapDiamCentered[i][j] = new TH2D(Form("hmap0_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+        fhMapEccCentered[i][j]  = new TH2D(Form("hmap0_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+        fhMapNCentered[i][j]    = new TH2D(Form("hmap0_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
     }
     for(Int_t j=0; j<2; j++)
+    {
         fhMapStd[i][j]   = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapStdCentered[i][j]   = new TH2D(Form("hmap0_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+    }
+    fhMapRimCentered[i] = new TH2D(Form("hmap0_rim_%d",i), "rim width", nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
 
     fhProfDiam[i][kInner] = new TH1D(Form("hprof_diam_%d_%d",i,kInner),"",300,0,110);
     fhProfDiam[i][kOuter] = new TH1D(Form("hprof_diam_%d_%d",i,kOuter),"",300,0,110);
@@ -255,9 +312,9 @@ void MOpt::FillOutputContainers(Int_t which_side)
         fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kDefect),  "d*4.4","goff");
         fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_diam_%d_%d",which_side,kEtching),"d*4.4","goff");
 
-        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kBlocked),"(1-b/a)*4.4","goff");
-        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kDefect),  "(1-b/a)*4.4","goff");
-        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kEtching),"(1-b/a)*4.4","goff");
+        fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kBlocked),"(1-b/a)","goff");
+        fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kDefect),  "(1-b/a)","goff");
+        fTree[which_side][kEtching]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_ecc_%d_%d",which_side,kEtching),"(1-b/a)","goff");
 
         fTree[which_side][kBlocked]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kBlocked),"","goff");
         fTree[which_side][kDefect]->Draw(Form("x*4.4/1000:y*4.4/1000>>hmap_n_%d_%d",which_side,kDefect),"","goff");
@@ -287,9 +344,9 @@ void MOpt::FillOutputContainers(Int_t which_side)
     fhMapDiam[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
     fhMapDiam[which_side][kOuter]->GetZaxis()->SetRangeUser(60, 100);
     fhMapEcc[which_side][kInner]->Divide(fhMapN[which_side][kInner]);
-    fhMapEcc[which_side][kInner]->GetZaxis()->SetRangeUser(-1, 1);
+    fhMapEcc[which_side][kInner]->GetZaxis()->SetRangeUser(0.02, 0.3);
     fhMapEcc[which_side][kOuter]->Divide(fhMapN[which_side][kOuter]);
-    fhMapEcc[which_side][kOuter]->GetZaxis()->SetRangeUser(-1, 1);
+    fhMapEcc[which_side][kOuter]->GetZaxis()->SetRangeUser(0.02, 0.3);
 
     fhMapLight[which_side]->Divide(fhMapN[which_side][kInner]);
     fhMapLight[which_side]->GetZaxis()->SetRangeUser(140, 180);
@@ -530,6 +587,7 @@ void MOpt::SaveTxt()
     {
         SaveTxt1D();
         SaveTxt2D();
+        SaveRootForCorrelation();
     }
 }
 //----------------------------------------------------------------------------------
@@ -640,6 +698,52 @@ void MOpt::SaveTxt1D()
         ofs << x << "\t" << rs << "\t" << ru << "\t" << is << "\t" << iu << "\t" << os << "\t" << ou << std::endl;
     }
     ofs.close();
+}
+//----------------------------------------------------------------------------------
+void MOpt::SaveRootForCorrelation()
+{
+    const TString outfilename = Form("%s/%s_opt.root",fOutDir[0].Data(), fName.Data());
+    //const TString outfilename = Form("/home/vargyas/Downloads/%s_opt.root", fName.Data());
+    TFile * outfile = new TFile(outfilename, "RECREATE");
+    outfile->cd();
+    TH2D * htmp;
+    TString holes[] = {"i","o"};
+        for(Int_t ihole=0; ihole<2; ihole++) //inner and outer
+        {
+            ShiftHisto(fhMapDiam[kSegmented][ihole], fhMapDiamCentered[kSegmented][ihole], fShift[0], fShift[1]);
+            htmp = FlipHisto(fhMapDiamCentered[kSegmented][ihole]);
+            htmp->Write(Form("hd%ss",holes[ihole].Data()));
+            ShiftHisto(fhMapDiam[kUnsegmented][ihole], fhMapDiamCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
+            fhMapDiamCentered[kUnsegmented][ihole]->Write(Form("hd%su",holes[ihole].Data()));
+
+
+            ShiftHisto(fhMapEcc[kSegmented][ihole], fhMapEccCentered[kSegmented][ihole], fShift[0], fShift[1]);
+            htmp = FlipHisto(fhMapEccCentered[kSegmented][ihole]);
+            htmp->Write(Form("he%ss",holes[ihole].Data()));
+            ShiftHisto(fhMapEcc[kUnsegmented][ihole], fhMapEccCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
+            fhMapEccCentered[kUnsegmented][ihole]->Write(Form("he%su",holes[ihole].Data()));
+
+            ShiftHisto(fhMapN[kSegmented][ihole], fhMapNCentered[kSegmented][ihole], fShift[0], fShift[1]);
+            htmp = FlipHisto(fhMapNCentered[kSegmented][ihole]);
+            htmp->Write(Form("hn%ss",holes[ihole].Data()));
+            ShiftHisto(fhMapN[kUnsegmented][ihole], fhMapNCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
+            fhMapNCentered[kUnsegmented][ihole]->Write(Form("hn%su",holes[ihole].Data()));
+
+            ShiftHisto(fhMapStd[kSegmented][ihole], fhMapStdCentered[kSegmented][ihole], fShift[0], fShift[1]);
+            htmp = FlipHisto(fhMapStdCentered[kSegmented][ihole]);
+            htmp->Write(Form("hdstd%ss",holes[ihole].Data()));
+            ShiftHisto(fhMapStd[kUnsegmented][ihole], fhMapStdCentered[kUnsegmented][ihole], fShift[0], fShift[1]);
+            fhMapStdCentered[kUnsegmented][ihole]->Write(Form("hdstd%su",holes[ihole].Data()));
+
+        }
+        ShiftHisto(fhMapRim[kSegmented], fhMapRimCentered[kSegmented], fShift[0], fShift[1]);
+        htmp = FlipHisto(fhMapRimCentered[kSegmented]);
+        htmp->Write("hrims");
+        ShiftHisto(fhMapRim[kUnsegmented], fhMapRimCentered[kUnsegmented], fShift[0], fShift[1]);
+        fhMapRimCentered[kUnsegmented]->Write("hrimu");
+
+    //outfile->Write();
+    outfile->Close();
 }
 //----------------------------------------------------------------------------------
 TString MOpt::GetSaveName()

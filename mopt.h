@@ -108,6 +108,14 @@ private:
     TH2D * fhMapStd[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
     TH2D * fhMapN[2][5];
     TH2D * fhMapRim[2];         ///< S/U side rim map (calculated here)
+
+    // centered histograms for later correlation studies
+    TH2D * fhMapDiamCentered[2][5];     ///< S/U side, inner and outer hole map histograms
+    TH2D * fhMapEccCentered[2][5];      ///< S/U side, inner and outer eccentricity map histograms
+    TH2D * fhMapStdCentered[2][2];      ///< S/U side, inner and outer hole map histograms (calculated here)
+    TH2D * fhMapNCentered[2][5];
+    TH2D * fhMapRimCentered[2];         ///< S/U side rim map (calculated here)
+
     TH2D * fhMapLight[2];       ///< S/U side foreground light map (should be between 140-180)
     TH1D * fhProfDiam[2][3];
     TF1 * ffProfFit[2][3];      ///< Gaussian fit to profile diagrams
@@ -136,6 +144,7 @@ public:
     void SaveTxt();
     void SaveTxt1D();
     void SaveTxt2D();
+    void SaveRootForCorrelation();
     TString GetSaveName();
 	TString GetROOTName(Int_t which_side);
     void DrawFitResult(Int_t which_side);

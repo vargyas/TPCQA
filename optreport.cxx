@@ -141,7 +141,7 @@ void MOptFrame::CreateDividedPad4(Int_t itab)
     Double_t middle_x = fXleft + (1.- fXleft - fXright)/2.;
     Double_t middle_y = fYbottom + (1.- fYtop - fYbottom)/2.;
 
-    TPaveLabel * sides[2][5];
+    TPaveLabel * sides[2][6];
 
     fCanv[itab]->cd();
 
@@ -304,6 +304,7 @@ void MOptFrame::LoadFileProtoScript(const TString infilename)
 
     DrawFoilNameLabel(false);
 
+
     DrawMaps(which_side);
     DrawProfiles(which_side);
     DrawStdMaps(which_side);
@@ -334,7 +335,7 @@ void MOptFrame::Print()
     std::cout << "Executing command: " << command << std::endl;
     gROOT->ProcessLine(command);
     // clean up
-    gROOT->ProcessLine( ".! rm ~/opt*.png" );
+    //gROOT->ProcessLine( ".! rm ~/opt*.png" );
     gROOT->SetBatch(kFALSE);
 }
 //---------------------------------------------------------------------------
@@ -346,7 +347,7 @@ MOptFrame::MOptFrame(Int_t location, UInt_t w, UInt_t h)
 
     // Create foil object (make sure to clear it)
     fOpt = new MOpt(location);
-    for(Int_t itab=0; itab<6; ++itab)
+    for(Int_t itab=0; itab<7; ++itab)
         fCanv[itab] = new TCanvas(Form("Canvas_%d",itab),"",w-20,h-120);
     CreateDividedPad4(0);
     CreateDividedPad2(1);
@@ -512,8 +513,8 @@ int main(int argc, char **argv)
 
     //const TString basedir = "/home/vargyas/cernbox/Work/ALICE/serviceWork/OS/";
     const TString basedir = "/mnt/alicetpc/storage/opticalData/results_svm/";
-
     //const TString basedir = "/home/vargyas/Downloads/";
+
     TString infile_s = Form("%s%s",basedir.Data(),infile_seg.Data());
     TString infile_u(infile_s);
     infile_u.ReplaceAll("-s","-u");
@@ -526,4 +527,5 @@ int main(int argc, char **argv)
 
     opt->Print();
     opt->Save();
+
 }
