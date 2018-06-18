@@ -3,14 +3,17 @@ import numpy as np
 import numpy.ma as ma
 #from functools import reduce
 from scipy.optimize import minimize
-from ROOT import TCanvas, TPad, TH1D, TH2D, TTree, gStyle, TGraph, TMultiGraph, TFile, TF1, TLegend, TMath, TPaveText, TLatex
+from ROOT import TCanvas, TPad, TH1D, TH2D, TTree, gStyle, TGraph, TFile, TF1, TLegend, TMath, TPaveText, TLatex
 from root_numpy import hist2array, array2hist
 import os.path
 #from matplotlib import pyplot as plt
-import math
+#import math
 import sys
 
 def ThisThesis(x=0.85, y=0.95, size=50):
+    """
+    Add 'This thesis' text to plot
+    """
     latex =  TLatex(x, y, "This thesis")
     print("ThisThesis()",x,y)
     latex.SetTextFont(43)
@@ -20,6 +23,9 @@ def ThisThesis(x=0.85, y=0.95, size=50):
     return latex
 
 def ThisThesis_old(x,y,size):
+    """
+    Add 'This thesis' text to plot
+    """
     pt = TPaveText(x,y,1,1,"bnNDC")
     pt.AddText("This thesis")
     pt.SetFillColor(0)
@@ -50,7 +56,6 @@ def CorrelationArrayToTHN(xmin, xmax, x, ymin, ymax, y, dim=2):
     dim==2: TH2 is better than TGraph as it has the colz drawing option
     dim==1: TH1 residual histogram
     """
-
     if dim==2:
         htmp = TH2D("htmp2","",100*int(xmax-xmin),xmin,xmax,100*int(ymax-ymin),ymin,ymax)
     else:
@@ -72,10 +77,12 @@ class Foil:
     
     def __init__(self, ID, ftype, gainfile, optfile):
         print("Initializing foil:", gainfile)
-        self._ID = ID
+        self._ID = ID # foil index to ensure unique ROOT naming
+        self._iplot = 0 # plot index to avoid overwriting of canvases
         self._type = ftype # 0: SP, 1: LP
         self._gdir = "/home/vargyas/Dropbox/TPCQA/data/GS/"
         self._odir = "/home/vargyas/Dropbox/TPCQA/data/OS/"
+        
         # init name from gain directory name as it is usually the barcode name
         self.SetName(gainfile)
         self.CreateContainers()
@@ -178,12 +185,35 @@ class Foil:
         f3 = TF1("f3","pol1",-1000,1000); f3.SetParameters(-m_bp[i]/2., 0)
         return f0,f1,f2,f3
         
+    def SetName(self, infilename):
+        """
+        Sets name of the foil and decides type (0: IROC, 1-3: OROC1-3)
+        and flavour (0: S, 1: LP)
+        """
+        
+        self._name = infilename 
+        # and decide foil type and flavour
+        if "I-" in self._name: self._type = 0
+        elif "O1-" in self._name: self._type = 1
+        elif "O2-" in self._name: self._type = 2
+        elif "O3-" in self._name: self._type = 3
+        else: self._type = 3 # if in doubt, choose largest one
+        print(infilename, "type recognized:", self._type)
+
+        if "G1" in self._name or "G4" in self._name: self._flavour = 0
+        elif "G2" in self._name or "G3" in self._name: self._flavour = 1
+        else: self._flavour = 0 # if in doubt, choose S
+        print("\tflavour recognized:", self._flavour)
+        
     def CreateHisto(self, name, title):
+        """
+        Create usual histo with 224*160 dimensions
+        """
         return TH2D(name, title, 224,-224*2,224*2,160,-160*3/2.,160*3/2.)
     
     def CreateContainers(self):
         """
-        Create all 2D histograms for gain (1) and diameters (6)
+        Create all 2D histograms for gain (1) and diameters (16)
         """
         self._hdiam = {}
         
@@ -224,6 +254,9 @@ class Foil:
                 iy_in = hin.GetYaxis().FindBin(y)
                 z = hin.GetBinContent(ix_in, iy_in)
                 hout.SetBinContent(ix, iy, z)
+        #print("CopyOptical() Over/Underflow in x and y")
+        #x, y = hout.GetXaxis(), hout.GetYaxis()
+        #print(hout.GetBinContent(0, 0), hout.GetBinContent(nx, ny))
         
     def LoadOptical(self, infilename):
         """
@@ -234,12 +267,10 @@ class Foil:
             print("\t Loading optical from ROOT...")
             histnames = ["hdis","hdiu","hdos","hdou","hnis","hniu","hnos","hnou","hais","haiu","haos","haou"]
             self.infile = TFile.Open(self._odir+infilename+".root")
-            self.infile.ls()
             for i in range(len(histnames)):
                 #self._hdiam[i] = self.infile.Get(histnames[i])
                 histname = histnames[i]
                 hindex = histname[1:]
-                print(histname, hindex)
                 self.CopyOptical(self.infile.Get(histnames[i]), self._hdiam[hindex])
                 self._hdiam[hindex].SetName("{}_{}".format(self._hdiam[hindex].GetName(),self._ID))
         
@@ -249,27 +280,6 @@ class Foil:
         
         for ih in self._hdiam:
             self.CleanHist(self._hdiam[ih])
-        
-    def SetName(self, infilename):
-        """
-        Sets name of the foil and decides type (0: IROC, 1-3: OROC1-3)
-        and flavour (0: S, 1: LP)
-        """
-        
-        self._name = infilename 
-        # and decide foil type and flavour
-        if "I-" in self._name: self._type = 0
-        elif "O1-" in self._name: self._type = 1
-        elif "O2-" in self._name: self._type = 2
-        elif "O3-" in self._name: self._type = 3
-        else: self._type = 3 # if in doubt, choose largest one
-        print(infilename, "type recognized:", self._type)
-
-        if "G1" in self._name or "G4" in self._name: self._flavour = 0
-        elif "G2" in self._name or "G3" in self._name: self._flavour = 1
-        else: self._flavour = 0 # if in doubt, choose S
-        print("\tflavour recognized:", self._flavour)
-
         
     def LoadGain(self, infilename):
         """
@@ -281,9 +291,7 @@ class Foil:
             self.infile_gain = TFile.Open(self._gdir+infilename+".root")
             self._hgain = self.infile_gain.Get("hgain")
             self.CleanHist(self._hgain)
-        
-        #if(False): print("anyad")
-        
+               
         else:
             print("\t Loading gain from text...")        
             self._tgain = TTree("gain_tree","gain tree");
@@ -294,7 +302,6 @@ class Foil:
             rootfile = TFile(self._gdir+infilename+".root", "RECREATE")
             self._hgain.Write("hgain")
             rootfile.Write()         
-
         
         if self._name=='I-G1-008': 
             print("\t CORRECTING FOIL FOR DIFFERENT SW VOLTAGE")
@@ -316,8 +323,11 @@ class Foil:
         self.CleanHist(self._hgain)
         
     def ConvertHistsToArray(self):
-        print("\t ConvertHistsToArray...")
-        # load arrays from histogram and reshape them to 1D
+        """
+        Extracts 2D arrays from the histograms and reshapes them to 1D
+        Also generates masked histograms, so outlyers would not contaminate the correlation
+        """
+        
         self._adiam = {}
         self._adiam_c = {}
         
@@ -334,46 +344,39 @@ class Foil:
         self._g = hist2array(self._hgain).reshape(224*160)
         self._g_c = ma.masked_outside(self._g, 0.1, 5)
         
-        self._is_mean =  ma.mean(self._adiam_c["dis"])
-        self._os_mean = ma.mean(self._adiam_c["dos"])
-        self._ou_mean = ma.mean(self._adiam_c["dou"])
-        print("Inner mean: {:.1f}, Outer mean: {:.1f}".format( self._is_mean, self._ou_mean) )
+        self._m_mean = ma.mean(self._adiam_c["dis"])
+        self._t_mean = ma.mean(self._adiam_c["dos"])
+        self._b_mean = ma.mean(self._adiam_c["dou"])
+        print("Middle mean: {:.1f}, Top mean: {:.1f}, Bottom mean {:.1f}".format( self._m_mean, self._t_mean, self._b_mean) )
 
+    def OptFormula(self, coeffs):
+
+        w_am = coeffs[0]
+        w_at = coeffs[1]
+        w_ab = coeffs[2]
         
-    def OptFormula(self, coeffs, plot=True):
-        w_i = coeffs[0]
-        w_os = coeffs[1]
-        w_ou = coeffs[2]
-        w_rim = coeffs[3]
-        w_all = w_i+w_ou+w_os+w_rim
-        #if(plot): return w_i* self._iu*self._ou
-        return w_ou/w_all*self._adiam_c["dou"]
+        #w_am = coeffs[3]
+        #w_ab = coeffs[4]
+        #w_all = w_dm+w_dt+w_db+w_am+w_ab
+        w_all = w_at + w_ab + w_am
+
+        formula = w_ab/w_all*self._adiam_c["aou"] + w_at/w_all*self._adiam_c["aos"] + w_am/w_all*self._adiam_c["ais"]
+        return ma.masked_outside(formula, 0, 1000)
         
-    def GainFormula(self, coeffs, plot=False):
-        f_g_all = [-0.0456, -0.0456, -0.0434, -0.0456]
-        f_g = f_g_all[self._type]
-        
-        #f_g = coeffs[0]
+    def GainFormula(self, coeffs):
+        G_all = [0.0456, 0.0456, 0.0434, 0.0456]
+        G = G_all[0] # assuming universal gain coefficient 
   
-        
-        #f_x0 = 75.5
-        f_x0_all = [85.5, 90, 80, 80]
-        f_x0 = f_x0_all[self._flavour]
-        #f_x0 = self._os_mean        
-        
-        # w_i = coeffs[2]
-        # w_o = coeffs[3]
-        # eps = 1E-19
-        #return np.exp(f_g*(w_i*1./(self._is) + w_o*1./(self._ou) - f_x0) )  
-        
+        #d0_all = [75.5, 90, 80, 80]
+        #d0 = d0_all[self._flavour]
+        d0 = coeffs[2+self._ID]
         #with np.errstate(divide='ignore'):
-        return np.exp(f_g*(self.OptFormula(coeffs,plot) - f_x0))
-
+        return np.exp( G * (d0-self.OptFormula(coeffs)) )
         
     def GeneratePredGain(self, coeffs):
         print("Generating pred. gain with parameters", coeffs)
         self._hpredgain =  self.CreateHisto("hpredgain_{}".format(self._ID),"PREDICTED GAIN")        
-        self._predgain = self.GainFormula(coeffs,True).reshape(224, 160) 
+        self._predgain = self.GainFormula(coeffs).reshape(224, 160) 
         print("predicted gain mean:",np.mean(self._predgain[self._predgain<10]))
         print("predicted gain std:",np.std(self._predgain[self._predgain<10]))
         print("measured gain mean:",np.mean(self._g))
@@ -381,7 +384,66 @@ class Foil:
         array2hist(self._predgain, self._hpredgain)  
         self.CleanHist(self._hpredgain)
         
+    def GenerateCorrelation(self): 
+        """
+        Generates the opt-gain correlation graph and the residual histogram
+        """
+        #kWhite  = 0,   kBlack  = 1,   kGray    = 920,  kRed    = 632,  kGreen  = 416,
+        #kBlue   = 600, kYellow = 400, kMagenta = 616,  kCyan   = 432,  kOrange = 800,
+        #kSpring = 820, kTeal   = 840, kAzure   =  860, kViolet = 880,  kPink   = 900
+        colors = [601, 823, 1, 633, 920, 617, 861, 401, 432, 880, 417, 800, 900]
+        
+        p = self._predgain.reshape(1, 224*160) 
+        g = self._g.reshape(1, 224*160)
+        n = 224*160
+        
+        # opt-gain correlation
+        self._gcorr = TGraph(n)
+        self._gcorr.SetName("gcorr{}".format(self._ID))
+        for i in range(n): self._gcorr.SetPoint(i, p[0][i], g[0][i])
+        self._gcorr.GetXaxis().SetTitle("Predicted gain")
+        self._gcorr.GetYaxis().SetTitle("Measured gain")
+        self._gcorr.SetTitle(self._name)
+        self._gcorr.SetMarkerColor(colors[self._ID])
+        self._gcorr.SetLineColor(colors[self._ID])
+        
+        # opt-gain residual
+        self._hocc = TH1D("hocc{}".format(self._ID),"",400, 0.0, 3.0)
+        for i in range(n): 
+            if(g[0][i]>0):
+                self._hocc.Fill(p[0][i] / g[0][i])
+        self._hocc.SetTitle(self._name)
+        self._focc = TF1("focc{}".format(self._ID),"gaus",0.0,3.0)
+        self._focc.SetParameters(1000, 1, 0.3)
+        self._focc.SetLineColor(1)
+        self._hocc.Fit(self._focc)
+        
+        # residual check
+        xmean, sigma = 0, 0
+        mean = self._hocc.GetMean()
+        nbins = self._hocc.GetNbinsX()
+        n = self._hocc.GetEntries()
+        nunder = self._hocc.GetBinContent(0)
+        nover  = self._hocc.GetBinContent(nbins+1)
+        
+        n = n-nunder-nover
+        for ib in range(nbins):
+            x=self._hocc.GetBinCenter(ib+1)
+            y=self._hocc.GetBinContent(ib+1)
+            sigma+=self._hocc.GetBinContent(ib+1)*TMath.Power((x-mean),2)
+            xmean += x*y
+        sigma2 = TMath.Sqrt(sigma/n)
+        xmean=xmean/n
+        print("estimated width: ", self._hocc.GetRMS(), self._hocc.GetStdDev(), sigma2)
+        print("mean check", mean, xmean)
+        self._res=self._focc.GetParameter(2)/self._focc.GetParameter(1)*100
+        
+    def GetResText(self):
+        return "{} #sigma/#mu={:.0f}%".format(self._name, self._res)
+    
     def DrawGainMaps(self):
+        self._iplot += 1
+
         gStyle.SetOptStat(0)
         xrange = 250
         # default size is IROC, change to OROC2 if recognized
@@ -395,7 +457,7 @@ class Foil:
         self._hgain.SetTitle("MEASURED GAIN")
         self.FormatMapHist(self._hpredgain)
         
-        c = TCanvas("c","",1600,800); c.Draw(); c.cd()
+        c = TCanvas("c{}".format(self._iplot),"",1600,800); c.Draw(); c.cd()
         #pt=ThisThesis(0.82, 0.91, 0.05*2)
         pt=ThisThesis()
         pt.Draw()
@@ -431,6 +493,7 @@ class Foil:
         h.GetZaxis().SetLabelSize(0.06)
         h.GetZaxis().SetTitleSize(0.07)
         h.GetZaxis().CenterTitle()
+        
     def FormatHist(self, h):
         gStyle.SetTitleFontSize(0.08)
         gStyle.SetTextFont(42)
@@ -444,6 +507,7 @@ class Foil:
         h.GetYaxis().CenterTitle()
 
     def DrawOptMaps(self, coeffs):
+        self._iplot += 1
         gStyle.SetOptStat(0)
         xrange = 250
         # default size is IROC, change to OROC2 if recognized
@@ -468,7 +532,7 @@ class Foil:
         self.FormatMapHist(self._hdiam["dou"])
 
         self._hopt = self.CreateHisto("hopt_{}".format(self._ID),"LINEAR COMBINATION")        
-        opt = self.OptFormula(coeffs, True)
+        opt = self.OptFormula(coeffs)
         newopt = opt.reshape(224, 160)
         array2hist(newopt, self._hopt)
         self._hopt.GetXaxis().SetRangeUser(-xrange, xrange)
@@ -477,7 +541,7 @@ class Foil:
         self.FormatMapHist(self._hopt)
 
         
-        c = TCanvas("c","",1600,1200); c.Draw(); c.cd()
+        c = TCanvas("c{}".format(self._iplot),"",1600,1200); c.Draw(); c.cd()
         x=1.0
         y=0.9
         #pt=ThisThesis(0.82, 0.91, 0.05)
@@ -509,18 +573,17 @@ class Foil:
         Drawing correlation and residual histogram for individual foils
         """
         
-        p = self._predgain.reshape(1, 224*160) 
-        g = self._g.reshape(1, 224*160)
-
-        hcorr=CorrelationArrayToTHN(0.5, 2, p[0][:], 0.5, 2, g[0][:], 2)
-        hcorr.Print()
+        self._iplot += 1
+        c = TCanvas("c{}".format(self._iplot),"",1000,1000)
+        xmin, xmax = 0.6, 1.5
+        
+        hcorr=TH2D("hcorr{}".format(self._ID),"",2,xmin,xmax,2,xmin,xmax)
         hcorr.GetXaxis().SetTitle("Predicted gain")
+        hcorr.GetXaxis().CenterTitle()
         hcorr.GetYaxis().SetTitle("Measured gain")
-        hcorr.SetTitle("")
-
-            
-        c = TCanvas("cc","",1000,1000)
-        hcorr.Draw("colz")
+        hcorr.GetYaxis().CenterTitle()
+        hcorr.Draw()
+        self._gcorr.Draw("P same")
 
         pt=ThisThesis()
         pt.Draw()
@@ -537,54 +600,30 @@ class Foil:
         f3.SetParameters(0,0.8); f3.SetLineColor(1); f3.SetLineStyle(2)
         f3.SetTitle("-20%")
         f1.Draw("same"); f2.Draw("same"); f3.Draw("same")
+        
         c.SaveAs("{}_corr.pdf".format(self._name))
 
         #######################################################################
-        """
-        self._hocc = CorrelationArrayToTHN(0, 3, p[0][:], 0, 3, g[0][:], 1)
-        self._hocc.SetTitle(self._name)
-        self.FormatHist(self._hocc)
-        focc = TF1("focc","gaus",0,3)
-        focc.SetParameters(1000, 1, 0.3)
-        focc.SetLineColor(1)
-        self._hocc.Fit(focc)
-        self._hocc.Print()
         
-        sigma=0
-        mean = self._hocc.GetMean()
-        xmean = 0
-        nbins = self._hocc.GetNbinsX()
-        n = self._hocc.GetEntries()
-        nunder = self._hocc.GetBinContent(0)
-        nover  = self._hocc.GetBinContent(nbins+1)
-        
-        n= n-nunder-nover
-        for ib in range(nbins):
-            x=self._hocc.GetBinCenter(ib+1)
-            y=self._hocc.GetBinContent(ib+1)
-            sigma+=self._hocc.GetBinContent(ib+1)*TMath.Power((x-mean),2)
-            xmean += x*y
-        sigma2 = TMath.Sqrt(sigma/n)
-        xmean=xmean/n
-        print("estimated width: ", self._hocc.GetRMS(), self._hocc.GetStdDev(), sigma2)
-        print("mean check", mean, xmean)
-        self._res=focc.GetParameter(2)/focc.GetParameter(1)*100
-
-        l = TLegend(0.6, 0.6, 0.88, 0.88)
-        l.SetBorderSize(0)
-        #l.AddEntry(self._hocc, "{:.0f}%".format(self._hocc.GetRMS()/self._hocc.GetMean()*100))
-        l.AddEntry(focc, "#sigma/#mu={:.0f}%".format(self._res))
-        l.Draw()
-
+        self._iplot += 1
+        c = TCanvas("c{}".format(self._iplot),"",1000,1000)
         pt=ThisThesis()
         pt.Draw()
 
+        self._hocc.Draw()
+        l = TLegend(0.6, 0.6, 0.88, 0.88)
+        l.SetBorderSize(0)
+        #l.AddEntry(self._hocc, "{:.0f}%".format(self._hocc.GetRMS()/self._hocc.GetMean()*100))
+        l.AddEntry(self._hocc, "#sigma/#mu={:.0f}%".format(self._res))
+        l.Draw()
+        
         c.SaveAs("{}_res.pdf".format(self._name))
-        """
-    def GetResText(self):
-        return "{} #sigma/#mu={:.0f}%".format(self._name, self._res)
+        
+
 
     def DrawHoleCorrelation(self):
+        
+        self._iplot += 1
         print("DrawHoleCorrelation()...")
         # inner average - outer average
         # inner average - outer unsegmented
@@ -601,8 +640,8 @@ class Foil:
         h_ia_oa.SetTitle("inner average vs. outer average")
         h_ia_ou.SetTitle("inner average vs. outer unsegmented")
         h_os_ou.SetTitle("outer segmented vs. outer unsegmented")
-               
-        c = TCanvas("ch","",1000,300)
+           
+        c = TCanvas("c{}".format(self._iplot),"",1000,300)
         
         c.Divide(3,1)
         h_ia_oa.GetZaxis().SetNdivisions(5)
@@ -613,8 +652,9 @@ class Foil:
         c.cd(3); self.FormatMapHist(h_os_ou); h_os_ou.Draw("colz")
         c.SaveAs("{}_holecorr.pdf".format(self._name))
         
-    def CheckMapAlignment(self):
-        c = TCanvas("c","",900,600); c.Draw(); c.cd()
+    def DrawMapAlignment(self):
+        self._iplot += 1
+        c = TCanvas("c{}".format(self._iplot),"",900,600); c.Draw(); c.cd()
 
         self._hgain.SetMarkerColor(1)
         self._hgain.SetMarkerStyle(20)
@@ -648,6 +688,7 @@ class Foil:
         Check and corrects the alignment of the optical measurement 
         of the two sides of the foil. Plots before and after correction data
         """
+        self._iplot += 1
         c = TCanvas("c","",900,600); c.Draw(); 
         c.Divide(2, 2)
 
@@ -674,9 +715,10 @@ optO2_S  = ["O2-G1-005_opt", "O2-G1-006_opt", "O2-G1-008_opt", "O2-G1-013_opt", 
 #gainO2_S = ["O2-G1-013",    "O2-G1-018",    "O2-G1-023",    "O2-G4-002",    "O2-G4-020"]
 #optO2_S  = ["O2-G1-013_2D", "O2-G1-018_2D", "O2-G1-023_2D", "O2-G4-002_2D", "O2-G4-020_2D"]
 
-gainO2_LP = ["O2-G2-007",      "O2-G2-021",    "O2-G2-022",    "O2-G2-027",    "O2-G3-026",    "O2-G3-022"]
-optO2_LP  = ["O2-G2-007-2_opt", "O2-G2-021_opt", "O2-G2-022_opt", "O2-G2-027_opt", "O2-G3-026_opt", "O2-G3-022_opt"]
-
+#gainO2_LP = ["O2-G2-007",      "O2-G2-021",    "O2-G2-022",    "O2-G2-027",    "O2-G3-026",    "O2-G3-022"]
+#optO2_LP  = ["O2-G2-007-2_opt", "O2-G2-021_opt", "O2-G2-022_opt", "O2-G2-027_opt", "O2-G3-026_opt", "O2-G3-022_opt"]
+gainO2_LP = ["O2-G2-007",       "O2-G2-027",    "O2-G3-026",    "O2-G3-022"]
+optO2_LP  = ["O2-G2-007-2_opt", "O2-G2-027_opt", "O2-G3-026_opt", "O2-G3-022_opt"]
 foils = []
 
 if len(sys.argv)<2:
@@ -686,7 +728,8 @@ else:
     ftype=int(sys.argv[1])
 
 types=["IROC-SP", "IROC-LP", "OROC2-SP", "OROC2-LP"]
-print("Processing", types[ftype])
+print("Processing foils of type {}".format(types[ftype]))
+
 
 if ftype==2:
     xmin, xmax = 0.6, 2
@@ -698,21 +741,27 @@ if ftype==3:
         foils.append( Foil(ifoil, 1, gainO2_LP[ifoil], optO2_LP[ifoil]) )
 if ftype==1:
     xmin, xmax = 0.5, 1.8
-    for ifoil in range(len(optLP)):
+    for ifoil in range(len(optLP)-1):
         foils.append( Foil(ifoil, 1, gainLP[ifoil], optLP[ifoil]) )
 if ftype==0:    
     xmin, xmax = 0.6, 1.5
- #   for ifoil in range(len(gainSP)):
-    for ifoil in range(1):
+    for ifoil in range(len(gainSP)):
+#    for ifoil in range(1):
         foils.append( Foil(ifoil, 0, gainSP[ifoil], optSP[ifoil]) )
 
-print(len(foils))
-coeffs = [0, 0, 1, 0]
+
+coeffs = [ 0., 0.5, 0.5]
+
+d0_individual = []
+for i in range(len(foils)): d0_individual.append(90.5)
+coeffs = coeffs + d0_individual
+
 # bounds of each parameter:
-# bnds = ((-1E9, 1E9), (-1E9, 1E9), (-10, 0), (0, 10), (0, 10))
+bnds = ((-1, 1), (0.1, 1),(0.1, 1)) #, (-10, 0), (0, 10), (0, 10))
+for ifoil in foils: bnds+=((30, 120),)
+print("The limits of the parameters:")
+print(bnds)
 print("Starting minimalization")
-#def cost(coeffs):
-#    return np.linalg.norm(foil._g - np.exp( coeffs[0]*(coeffs[2]*foil._is + coeffs[3]*foil._os - coeffs[1])) )
 
 def allcost(coeffs):
     cost = 0  
@@ -725,12 +774,8 @@ def allcost(coeffs):
 # Minimize linear combination and generate predicted gain from that
 # Also draw the gain-predicted gain comparisons
 # -----------------------------------------------------------
-#res = minimize(allcost, coeffs, bounds=bnds, method="L-BFGS-B")
-
-
-
-
-res = minimize(allcost, coeffs,  method="Nelder-Mead")
+res = minimize(allcost, coeffs, bounds=bnds, method="L-BFGS-B")
+#res = minimize(allcost, coeffs,  method="Nelder-Mead")
 print(res.message)
 print(res.x)
 
@@ -738,52 +783,28 @@ plotcoeff = res.x
 
 for ifoil in foils: 
     ifoil.GeneratePredGain(plotcoeff)
+    ifoil.GenerateCorrelation()
     ifoil.DrawGainMaps()
-    ifoil.DrawOptMaps(plotcoeff)
-    ifoil.DrawCorrelation()
-    ifoil.DrawHoleCorrelation()
+    #ifoil.DrawOptMaps(plotcoeff)
+    #ifoil.DrawCorrelation()
+    #ifoil.DrawHoleCorrelation()
     
-
-
-
-
 # -----------------------------------------------------------
 # draw correlations:
 # -----------------------------------------------------------
-#gcorr = TMultiGraph()
-gcorr=[]
 
 #kWhite  = 0,   kBlack  = 1,   kGray    = 920,  kRed    = 632,  kGreen  = 416,
 #kBlue   = 600, kYellow = 400, kMagenta = 616,  kCyan   = 432,  kOrange = 800,
 #kSpring = 820, kTeal   = 840, kAzure   =  860, kViolet = 880,  kPink   = 900
 colors = [601, 823, 1, 633, 920, 617, 861, 401, 432, 880, 417, 800, 900]
 #colors = [ 601, 634, 417, 433, 635, 619, 603, 636, 435,     601, 634, 417, 433, 635, 619, 603, 636, 719, 435]
-
-index = 0
-for ifoil in foils:
-    #p = ifoil.OptFormula(plotcoeff, True).reshape(1, 224*160) 
-    p = ifoil._predgain.reshape(1, 224*160) 
-    g = ifoil._g.reshape(1, 224*160)
-    gr = TGraph(224*260)
-    for i in range(224*160):
-        gr.SetPoint(i, p[0][i], g[0][i])
-    gr.SetMarkerColorAlpha(colors[index],0.2)
-    gr.SetLineColor(colors[index])
-    gr.SetFillColorAlpha(0,0.2)
-    gr.SetMarkerStyle(1)
-    gr.SetMarkerSize(0.01)
-    gr.SetTitle(ifoil._name)
-    gcorr.append(gr)
-    index+=1
     
-    ifoil.CheckMapAlignment()
-    
-c = TCanvas("cc","",800,800)
+c = TCanvas("ccorr","",800,800)
 p = TPad("p","",0,0,1,1)
 p.SetLeftMargin(0.15)
 p.SetBottomMargin(0.15)
-p.SetRightMargin(0)
-p.SetTopMargin(0)
+p.SetRightMargin(0.05)
+p.SetTopMargin(0.05)
 p.Draw(); p.cd()
 p.SetLogx()
 p.SetLogy()
@@ -823,25 +844,19 @@ hcorr.GetXaxis().SetNdivisions(2)
 hcorr.GetYaxis().SetNdivisions(2)
 #hcorr.GetXaxis().SetMoreLogLabels()
 #hcorr.GetYaxis().SetMoreLogLabels()
-
 hcorr.Draw()
-for ig in range(len(gcorr)):
-    gcorr[ig].Draw("P same")
 
-f1.Draw("same")
-f2.Draw("same")
-f3.Draw("same")
-
-#c.BuildLegend(0.6, 0.1, 0.9, 0.5, "","NDC")
-l = TLegend(0.75, 0.2, 0.96, 0.6, "", "bnNDC")
+l = TLegend(0.75, 0.2, 0.9, 0.56, "", "bnNDC")
 l.SetBorderSize(0)
-for ig in gcorr:
-    l.AddEntry(ig, ig.GetTitle(), "l")
+for ifoil in foils:
+    ifoil._gcorr.Draw("P same")
+    l.AddEntry(ifoil._gcorr, ifoil._gcorr.GetTitle(), "l")
 l.Draw()
+f1.Draw("same");f2.Draw("same");f3.Draw("same")
 
 pt = TPaveText(0.16,0.85,0.8,0.94,"bnNDC")
 aw = np.sum(plotcoeff)
-pt.AddText('Weights: inner: {:.1f}, outer seg. {:.1f}, outer unseg. {:.1f}'.format(plotcoeff[0]/aw, plotcoeff[1]/aw, plotcoeff[2]/aw));
+#pt.AddText('Weights: inner: {:.1f}, outer seg. {:.1f}, outer unseg. {:.1f}'.format(plotcoeff[0]/aw, plotcoeff[1]/aw, plotcoeff[2]/aw));
 pt.SetFillColor(0)
 pt.SetLineColor(0)
 pt.SetLineWidth(0)
@@ -851,7 +866,7 @@ pt.SetTextFont(42)
 pt.Draw()
 
 #thesis=ThisThesis(0.72, 0.92, 0.06)
-thesis=ThisThesis(0.175, 0.95, 40)
+thesis=ThisThesis(0.17, 0.9, 40)
 thesis.Draw()
 c.SaveAs("corr-{}.pdf".format(types[ftype]))
 print(f1.Eval(70), f1.Eval(80))
@@ -859,12 +874,13 @@ print(f1.Eval(70), f1.Eval(80))
 # -----------------------------------------------------------
 # draw residuals:
 # -----------------------------------------------------------
-c = TCanvas("cr","",800,800)
+
+c = TCanvas("cres","",800,800)
 p = TPad("p","",0,0,1,1)
 p.SetLeftMargin(0.15)
 p.SetBottomMargin(0.15)
-p.SetTopMargin(0)
-p.SetRightMargin(0.0)
+p.SetTopMargin(0.05)
+p.SetRightMargin(0.05)
 p.Draw(); p.cd()
 
 foils[0]._hocc.GetXaxis().SetLabelSize(0.04)
@@ -882,7 +898,7 @@ foils[0]._hocc.GetYaxis().SetTitle("")
 foils[0]._hocc.GetYaxis().CenterTitle()
 foils[0]._hocc.GetXaxis().SetNdivisions(10)
 foils[0]._hocc.GetYaxis().SetNdivisions(5)
-foils[0]._hocc.GetXaxis().SetRangeUser(0.4, 2.6)
+foils[0]._hocc.GetXaxis().SetRangeUser(0., 5)
 
 for i in range(len(foils)):
     foils[i]._hocc.SetLineColor(colors[i])
