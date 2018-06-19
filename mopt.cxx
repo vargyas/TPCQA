@@ -245,51 +245,61 @@ void MOpt::CreateOutputContainers(Int_t which_side)
     TString holtyp[] = {"inner", "outer", "blocked", "defect", "etching"};
     Int_t i = which_side;
 
-    // setup bin sizes
-    Double_t xstep = 1; // bin width in x [mm]
-    Double_t ystep = 1; // bin width in y [mm]
-
-    // histogram sizes are the blueprint sizes in mm with the copper area included
+    // histogram sizes are based on the blueprint sizes (see GetFrame())
+    // only they are slightly larger (x1.05) and rounded up to maintain the exact 1 mm binning
     // iroc,  oroc1, oroc2, oroc3, unrecognised (largest is chosen)
-    Double_t xx[] = {467.0, 595.8, 726.2, 867.0, 867.0};
-    Double_t yy[] = {496.5, 353.0, 350.0, 379.0, 379.0};
+    Double_t xx[] = {490.5, 626.5, 763.5, 910.5, 910.5};
+    Double_t yy[] = {521.5, 371.5, 368.5, 398.5, 398.5};
+    Double_t x0[] = {-23.5, -30.5, -36.5, -43.5, -43.5}; // negative value to not miss data on misplaced foils
+    Double_t y0[] = {25.5, 18.5, 18.5, 19.5, 19.5}; // positive value to not miss data on misplaced foils
+    // half values (ensuring 0.5 ending)
+    Double_t xh[] = {245.5, 313.5, 381.5, 455.5, 455.5, 245.5};
+    Double_t yh[] = {260.5, 185.5, 184.5, 199.5, 199.5, 260.5};
 
-    // correction to grow above sizes
-    // (only the container size, to account for e.g. shift of the foil in the scanner)
-    // nbins will grow accordingly, keeping the distance ratio
-    Double_t corrx=0.05;
-    Double_t corry=0.05;
-
-    Int_t nx[5], ny[5];
+    Int_t nx[5], ny[5], nhx[5], nhy[5];
     for(Int_t i=0; i<5; ++i) {
-        //xx[i]=xx[i]*corrx;
-        //yy[i]=yy[i]*corry;
-        nx[i] = int(xx[i]*(1+corrx)/xstep);
-        ny[i] = int(yy[i]*(1+corry)/ystep);
+        nx[i] = int(xx[i]-x0[i]); // This is on puspose as x goes from x0 to x
+        ny[i] = int(yy[i]+y0[i]); // This is on purpose as y goes from -y to +y0
+        nhx[i] = int(2*xh[i]);
+        nhy[i] = int(2*yh[i]);
     }
+
+    // shortcut to histo parameters
+    Int_t _nx = nx[fType];
+    Int_t _ny = ny[fType];
+    Double_t _x = xx[fType];
+    Double_t _y = yy[fType];
+    Double_t _x0 = x0[fType];
+    Double_t _y0 = y0[fType];
+    // shortcut to half histo parameters
+    Int_t _nhx = nhx[fType];
+    Int_t _nhy = nhy[fType];
+    Double_t _xh = xh[fType];
+    Double_t _yh = yh[fType];
 
     for(Int_t j=0; j<5; j++)
     {
-        // might need adjustment -yy[fType]+offset, offset
-        fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapEllipseA[i][j] = new TH2D(Form("hmap_ellipse_a_%d_%d",i,j),Form("%s ellipse a",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapEllipseB[i][j] = new TH2D(Form("hmap_ellipse_b_%d_%d",i,j),Form("%s ellipse b",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapEcc[i][j]  = new TH2D(Form("hmap_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+        fhMapDiam[i][j] = new TH2D(Form("hmap_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), _nx, _x0, _x, _ny, -_y, _y0);
+        //std::cout << fhMapDiam[i][j]->GetXaxis()->GetBinWidth(1) << "\t" << fhMapDiam[i][j]->GetYaxis()->GetBinWidth(1) << std::endl;
+        fhMapEllipseA[i][j] = new TH2D(Form("hmap_ellipse_a_%d_%d",i,j),Form("%s ellipse a",holtyp[j].Data()), _nx, _x0, _x, _ny, -_y, _y0);
+        fhMapEllipseB[i][j] = new TH2D(Form("hmap_ellipse_b_%d_%d",i,j),Form("%s ellipse b",holtyp[j].Data()), _nx, _x0, _x, _ny, -_y, _y0);
+        fhMapEcc[i][j]  = new TH2D(Form("hmap_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), _nx, _x0, _x, _ny, -_y, _y0);
+        fhMapN[i][j]    = new TH2D(Form("hmap_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()), _nx, _x0, _x, _ny, -_y, _y0);
 
-        //
-        fhMapDiamCentered[i][j] = new TH2D(Form("hmap0_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
-        fhMapEccCentered[i][j]  = new TH2D(Form("hmap0_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
-        fhMapNCentered[i][j]    = new TH2D(Form("hmap0_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
-        fhMapEllipseACentered[i][j]    = new TH2D(Form("hmap0_ellipse_a_%d_%d",i,j),   Form("%s ellipse a",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
-        fhMapEllipseBCentered[i][j]    = new TH2D(Form("hmap0_ellipse_b_%d_%d",i,j),   Form("%s ellipse b",holtyp[j].Data()),        nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+
+        fhMapDiamCentered[i][j] = new TH2D(Form("hmap0_diam_%d_%d",i,j),Form("%s diameter",holtyp[j].Data()), _nhx, -_xh, _xh, _nhy, -_yh, _yh);
+        //std::cout << fhMapDiamCentered[i][j]->GetXaxis()->GetBinWidth(1) << "\t" << fhMapDiamCentered[i][j]->GetYaxis()->GetBinWidth(1) << std::endl;
+        fhMapEccCentered[i][j]  = new TH2D(Form("hmap0_ecc_%d_%d",i,j), Form("%s eccentricity",holtyp[j].Data()), _nhx, -_xh, _xh, _nhy, -_yh, _yh);
+        fhMapNCentered[i][j]    = new TH2D(Form("hmap0_n_%d_%d",i,j),   Form("N %s",holtyp[j].Data()),        _nhx, -_xh, _xh, _nhy, -_yh, _yh);
+        fhMapEllipseACentered[i][j]    = new TH2D(Form("hmap0_ellipse_a_%d_%d",i,j),   Form("%s ellipse a",holtyp[j].Data()),        _nhx, -_xh, _xh, _nhy, -_yh, _yh);
+        fhMapEllipseBCentered[i][j]    = new TH2D(Form("hmap0_ellipse_b_%d_%d",i,j),   Form("%s ellipse b",holtyp[j].Data()),        _nhx, -_xh, _xh, _nhy, -_yh, _yh);
     }
     for(Int_t j=0; j<2; j++)
     {
-        fhMapStd[i][j]   = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
-        fhMapStdCentered[i][j]   = new TH2D(Form("hmap0_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+        fhMapStd[i][j]   = new TH2D(Form("hmap_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), _nx, _x0, _x, _ny, -_y, _y0);
+        fhMapStdCentered[i][j]   = new TH2D(Form("hmap0_std_%d_%d",i,j), Form("std. of %s diameter",holtyp[j].Data()), _nhx, -_xh, _xh, _nhy, -_yh, _yh);
     }
-    fhMapRimCentered[i] = new TH2D(Form("hmap0_rim_%d",i), "rim width", nx[fType], -xx[fType]/2., xx[fType]/2., ny[fType], -yy[fType]/2., yy[fType]/2.);
+    fhMapRimCentered[i] = new TH2D(Form("hmap0_rim_%d",i), "rim width", _nhx, -_xh, _xh, _nhy, -_yh, _yh);
 
     fhProfDiam[i][kInner] = new TH1D(Form("hprof_diam_%d_%d",i,kInner),"",300,0,110);
     fhProfDiam[i][kOuter] = new TH1D(Form("hprof_diam_%d_%d",i,kOuter),"",300,0,110);
@@ -299,7 +309,7 @@ void MOpt::CreateOutputContainers(Int_t which_side)
         fhProfDiam[i][j]->GetXaxis()->SetTitle("diameter [#mum]");
         fhProfDiam[i][j]->GetYaxis()->SetTitle("occurrence");
     }
-    fhMapLight[i] = new TH2D(Form("hmap_fl_%d",i), Form("Foreground light"), nx[fType], -xx[fType]*corrx, xx[fType], ny[fType], -yy[fType], yy[fType]*corry);
+    fhMapLight[i] = new TH2D(Form("hmap_fl_%d",i), Form("Foreground light"), _nx, _x0, _x, _ny, -_y, _y0);
 
     ffProfFit[i][kInner] = new TF1(Form("inner_fit_%d", which_side),"gaus",0,110);
     ffProfFit[i][kOuter] = new TF1(Form("outer_fit_%d", which_side),"gaus",0,110);
